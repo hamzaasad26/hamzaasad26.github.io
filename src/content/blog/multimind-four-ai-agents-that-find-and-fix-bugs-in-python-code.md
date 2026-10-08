@@ -22,10 +22,24 @@ It's built on LangGraph, running Llama 3.3 70B through Groq's free tier. The fou
 The flow is a loop:
 
 ```
-buggy code + error → Planner → Coder → Tester → Reviewer
-                                                   │
-                  score ≥ 7 and tests pass → done  │
-                  otherwise → back to Planner, with notes (max 3 tries)
+🐛 Bug + Error
+      ↓
+🧠 Planner
+      ↓
+💻 Coder
+      ↓
+🧪 Tester
+      ↓
+🔍 Reviewer
+      ↓
+ Score ≥ 7
+ & Tests Pass?
+   ↙       ↘
+ YES       NO
+  ↓         ↓
+✅ Done   🔄 Retry
+            ↓
+        🧠 Planner
 ```
 
 Three small decisions turned out to matter more than I expected:
