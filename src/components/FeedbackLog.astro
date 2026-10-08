@@ -1,30 +1,7 @@
 ---
-
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import '@fontsource/jetbrains-mono/700.css';
-
-// TODO (backend step): put the form endpoint URL here.
-// While this is empty, the submit button stays disabled.
-const formAction = '';
-
-type Entry = { epoch: number; msg: string };
-
-// Sample lines so you can see the design. They only appear in `npm run dev`,
-// never in the production build.
-const samples: Entry[] = [
-	{ epoch: 5, msg: 'loved the intro' },
-	{ epoch: 6, msg: 'the second half lost me, too many terms' },
-	{ epoch: 7, msg: 'finally understood what a pipeline is' },
-	{ epoch: 8, msg: 'code blocks are hard to read on my phone' },
-	{ epoch: 9, msg: 'more real examples please' },
-];
-
-// TODO (backend step): replace with the approved notes from the database.
-const entries: Entry[] = import.meta.env.DEV ? samples : [];
-
-const nextEpoch = (entries.at(-1)?.epoch ?? 0) + 1;
-const pad = (n: number) => String(n).padStart(2, '0');
 ---
 
 <section class="feedback" aria-labelledby="feedback-title">
@@ -40,64 +17,179 @@ const pad = (n: number) => String(n).padStart(2, '0');
 		<div class="titlebar">
 			<div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
 			<div class="filename">feedback.log</div>
-			<div class="status"><span class="live" aria-hidden="true"></span>training</div>
+			<div class="status-pill"><span class="live" aria-hidden="true"></span>training</div>
 		</div>
 
 		<div class="stats">
-			<div>epochs <strong>{entries.length}</strong></div>
+			<div>epochs <strong id="fb-count">0</strong></div>
 		</div>
 
-		<ol class="log">
-			{
-				entries.length === 0 ? (
-					<li class="row">
-						<span class="epoch">epoch 01</span>
-						<span class="sep" aria-hidden="true">|</span>
-						<span class="msg muted">waiting for the first note...</span>
-					</li>
-				) : (
-					entries.map((e) => (
-						<li class="row">
-							<span class="epoch">epoch {pad(e.epoch)}</span>
-							<span class="sep" aria-hidden="true">|</span>
-							<span class="msg">
-								<span class="muted">reader:</span> “{e.msg}”
-							</span>
-						</li>
-					))
-				)
-			}
+		<ol class="log" id="fb-log">
+			<li class="row">
+				<span class="epoch">epoch 01</span>
+				<span class="sep" aria-hidden="true">|</span>
+				<span class="msg muted">loading the log...</span>
+			</li>
 		</ol>
 
-		<form class="next" method="post" action={formAction || undefined}>
+		<form class="next" id="fb-form" autocomplete="off">
 			<div class="row input-row">
-				<span class="epoch next-epoch">epoch {pad(nextEpoch)}</span>
+				<span class="epoch next-epoch">epoch <span id="fb-next">01</span></span>
 				<span class="sep" aria-hidden="true">|</span>
 				<div class="note">
 					<span class="muted note-label">reader:</span>
 					<textarea
 						name="message"
 						rows="3"
+						maxlength="280"
 						required
 						aria-label="Your feedback note"
 						placeholder="type your note here..."></textarea>
 				</div>
 			</div>
+
+			<!-- Bot trap: humans never see or fill this. -->
+			<input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
 			<div class="controls">
 				<input
 					type="text"
 					name="name"
+					maxlength="30"
 					aria-label="Your name (optional)"
 					placeholder="name (optional)"
-					autocomplete="name"
 				/>
-				<button type="submit" disabled={!formAction}>run epoch ↵</button>
+				<button type="submit" id="fb-submit">run epoch ↵</button>
 			</div>
+			<p class="status" id="fb-status" role="status" aria-live="polite"></p>
 		</form>
 	</div>
 
-	<p class="fine">No account needed. Notes show up in the log after I've read them.</p>
+	<p class="fine">No account needed. Notes show up in the log right away.</p>
+
+	<!-- Row blueprint used by the script, so dynamic rows get the same styles. -->
+	<template id="fb-row">
+		<li class="row">
+			<span class="epoch"></span>
+			<span class="sep" aria-hidden="true">|</span>
+			<span class="msg"><span class="muted who"></span> <span class="text"></span></span>
+		</li>
+	</template>
 </section>
+
+<script>
+	import { db } from '../lib/firebase';
+	import {
+		addDoc,
+		collection,
+		limitToLast,
+		onSnapshot,
+		orderBy,
+		query,
+		serverTimestamp,
+	} from 'firebase/firestore';
+
+	const pad = (n: number) => String(n).padStart(2, '0');
+
+	const log = document.getElementById('fb-log') as HTMLOListElement;
+	const count = document.getElementById('fb-count') as HTMLElement;
+	const next = document.getElementById('fb-next') as HTMLElement;
+	const form = document.getElementById('fb-form') as HTMLFormElement;
+	const submit = document.getElementById('fb-submit') as HTMLButtonElement;
+	const status = document.getElementById('fb-status') as HTMLElement;
+	const tpl = document.getElementById('fb-row') as HTMLTemplateElement;
+
+	function makeRow(epoch: number) {
+		const li = tpl.content.firstElementChild!.cloneNode(true) as HTMLElement;
+		li.querySelector('.epoch')!.textContent = 'epoch ' + pad(epoch);
+		return li;
+	}
+
+	function showMessageRow(text: string, epoch = 1) {
+		const li = makeRow(epoch);
+		const msg = li.querySelector('.msg')!;
+		msg.textContent = text;
+		msg.classList.add('muted');
+		log.replaceChildren(li);
+	}
+
+	// Live feed: every new note appears here without a reload.
+	const q = query(collection(db, 'feedback'), orderBy('createdAt', 'asc'), limitToLast(50));
+	onSnapshot(
+		q,
+		(snap) => {
+			count.textContent = String(snap.size);
+			next.textContent = pad(snap.size + 1);
+			if (snap.empty) {
+				showMessageRow('waiting for the first note...');
+				return;
+			}
+			const rows = snap.docs.map((d, i) => {
+				const data = d.data();
+				const li = makeRow(i + 1);
+				const name = typeof data.name === 'string' ? data.name.trim() : '';
+				// textContent only, so visitors can never inject HTML.
+				li.querySelector('.who')!.textContent = name ? `reader (${name}):` : 'reader:';
+				li.querySelector('.text')!.textContent = `“${String(data.message ?? '')}”`;
+				return li;
+			});
+			log.replaceChildren(...rows);
+		},
+		() => showMessageRow("can't reach the log right now, try again later."),
+	);
+
+	function setStatus(text: string) {
+		status.textContent = text;
+	}
+
+	const COOLDOWN_MS = 60_000;
+
+	form.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		const fd = new FormData(form);
+
+		// Bot trap filled in: pretend it worked, store nothing.
+		if (fd.get('website')) {
+			form.reset();
+			setStatus('> note received. thanks!');
+			return;
+		}
+
+		const message = String(fd.get('message') ?? '').trim();
+		const name = String(fd.get('name') ?? '').trim().slice(0, 30);
+		if (!message) {
+			setStatus('> write something first.');
+			return;
+		}
+
+		let last = 0;
+		try {
+			last = Number(localStorage.getItem('fb_last') ?? 0);
+		} catch {}
+		if (Date.now() - last < COOLDOWN_MS) {
+			setStatus('> easy there, give it a minute before the next note.');
+			return;
+		}
+
+		submit.disabled = true;
+		try {
+			await addDoc(collection(db, 'feedback'), {
+				message,
+				name,
+				createdAt: serverTimestamp(),
+			});
+			try {
+				localStorage.setItem('fb_last', String(Date.now()));
+			} catch {}
+			form.reset();
+			setStatus('> note received. thanks!');
+		} catch {
+			setStatus('> something went wrong, try again in a bit.');
+		} finally {
+			submit.disabled = false;
+		}
+	});
+</script>
 
 <style>
 	.feedback {
@@ -161,7 +253,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 	.filename {
 		font-size: 13px;
 	}
-	.status {
+	.status-pill {
 		display: flex;
 		align-items: center;
 		gap: 8px;
@@ -266,6 +358,13 @@ const pad = (n: number) => String(n).padStart(2, '0');
 		width: 170px;
 		font-size: 13px;
 	}
+	.hp {
+		position: absolute;
+		left: -9999px;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+	}
 	textarea::placeholder,
 	input::placeholder {
 		color: var(--muted);
@@ -302,6 +401,14 @@ const pad = (n: number) => String(n).padStart(2, '0');
 		opacity: 0.45;
 		cursor: not-allowed;
 	}
+	.status {
+		margin: 0;
+		min-height: 1.5em;
+		padding-left: 88px;
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--accent);
+	}
 
 	.fine {
 		margin: 12px 0 0;
@@ -328,7 +435,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 		.next-epoch {
 			padding-top: 0;
 		}
-		.controls {
+		.controls,
+		.status {
 			padding-left: 0;
 		}
 		.controls input {
