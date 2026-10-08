@@ -1,0 +1,24 @@
+backend:
+  name: github
+  repo: hamzaasad26/hamzaasad26.github.io
+  branch: main
+
+media_folder: public/uploads
+public_folder: /uploads
+
+collections:
+  - name: blog
+    label: Blog Posts
+    folder: src/content/blog
+    create: true
+    extension: md
+    format: frontmatter
+    slug: '{{slug}}'
+    media_folder: /src/assets/blog
+    public_folder: ../../assets/blog
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Description, name: description, widget: string }
+      - { label: Publish Date, name: pubDate, widget: datetime, format: 'YYYY-MM-DD', date_format: 'YYYY-MM-DD', time_format: false }
+      - { label: Cover Image, name: heroImage, widget: image, required: false }
+      - { label: Body, name: body, widget: markdown }
