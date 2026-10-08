@@ -2,7 +2,7 @@
 title: 'Building ArthoCare: An Arthritis Monitoring App for My FYP'
 description: How my team and I built an app that measures joint range of motion with computer vision, and what went wrong along the way
 pubDate: 2026-05-08
-heroImage: ../../assets/blog/pp.jpg
+heroImage: ''
 ---
 
 ## What did we make?
