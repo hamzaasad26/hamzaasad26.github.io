@@ -1,9 +1,14 @@
 ---
 import FeedbackLog from './FeedbackLog.astro';
+import Comments from './Comments.astro';
 const today = new Date();
+
+// Articles (/blog/some-post/) get the comment section.
+// Every other page (home, blog list, about) gets the site feedback log.
+const isArticle = /^\/blog\/[^/]+/.test(Astro.url.pathname);
 ---
 
-<FeedbackLog />
+{isArticle ? <Comments /> : <FeedbackLog />}
 
 <footer>
 	&copy; {today.getFullYear()} Hamza Asad. All rights reserved.

@@ -1,0 +1,689 @@
+---
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+import '@fontsource/jetbrains-mono/700.css';
+
+// Every article's comments live in one Firestore collection ("comments"),
+// and each comment remembers which article it belongs to via this page path.
+const slug = Astro.url.pathname.replace(/^\/+|\/+$/g, '');
+---
+
+<section class="cm" aria-labelledby="cm-title" data-comments data-slug={slug}>
+	<div class="cm-intro">
+		<h2 id="cm-title">$ git log --comments</h2>
+		<p>
+			Got a question, a correction, an idea, or just something nice to say? Pick a tag, leave a
+			note, and I'll reply right here.
+		</p>
+	</div>
+
+	<div class="cm-panel">
+		<div class="cm-titlebar">
+			<div class="cm-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+			<div class="cm-file">git log</div>
+			<div class="cm-live">
+				<span class="cm-dot" aria-hidden="true"></span>
+				<span><span id="cm-total">0</span> comments</span>
+			</div>
+		</div>
+
+		<div class="cm-filters" role="group" aria-label="Filter comments by tag">
+			<span class="cm-label">filter:</span>
+			<button type="button" class="cm-chip" data-filter="all" data-tag="all" aria-pressed="true"
+				>all <span class="cm-n">0</span></button
+			>
+			<button
+				type="button"
+				class="cm-chip"
+				data-filter="question"
+				data-tag="question"
+				aria-pressed="false">[?] question <span class="cm-n">0</span></button
+			>
+			<button
+				type="button"
+				class="cm-chip"
+				data-filter="praise"
+				data-tag="praise"
+				aria-pressed="false">[+] praise <span class="cm-n">0</span></button
+			>
+			<button
+				type="button"
+				class="cm-chip"
+				data-filter="correction"
+				data-tag="correction"
+				aria-pressed="false">[!] correction <span class="cm-n">0</span></button
+			>
+			<button type="button" class="cm-chip" data-filter="idea" data-tag="idea" aria-pressed="false"
+				>[*] idea <span class="cm-n">0</span></button
+			>
+		</div>
+
+		<ol class="cm-list" id="cm-list" aria-live="polite">
+			<li class="cm-empty">loading comments...</li>
+		</ol>
+
+		<form class="cm-form" id="cm-form" autocomplete="off">
+			<div class="cm-tags" role="group" aria-label="Choose a tag for your comment">
+				<span class="cm-label">tag:</span>
+				<button type="button" class="cm-tagbtn" data-pick="question" data-tag="question" aria-pressed="true"
+					>[?] question</button
+				>
+				<button type="button" class="cm-tagbtn" data-pick="praise" data-tag="praise" aria-pressed="false"
+					>[+] praise</button
+				>
+				<button
+					type="button"
+					class="cm-tagbtn"
+					data-pick="correction"
+					data-tag="correction"
+					aria-pressed="false">[!] correction</button
+				>
+				<button type="button" class="cm-tagbtn" data-pick="idea" data-tag="idea" aria-pressed="false"
+					>[*] idea</button
+				>
+			</div>
+
+			<textarea
+				id="cm-text"
+				name="message"
+				rows="4"
+				maxlength="1000"
+				required
+				aria-label="Your comment"
+				placeholder="what are you stuck on?"></textarea>
+
+			<!-- Bot trap: humans never see or fill this. -->
+			<input class="cm-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+			<div class="cm-controls">
+				<input
+					type="text"
+					name="name"
+					maxlength="30"
+					aria-label="Your name (optional)"
+					placeholder="name (optional)"
+					autocomplete="name"
+				/>
+				<button type="submit" class="cm-submit" id="cm-submit">post comment ↵</button>
+			</div>
+			<p class="cm-status" id="cm-status" role="status" aria-live="polite"></p>
+		</form>
+	</div>
+
+	<p class="cm-fine">
+		No account needed. Questions get a ✓ answered when I reply, and corrections get a ✓ fixed once
+		I've updated the article.
+	</p>
+</section>
+
+<script>
+	import { db } from '../lib/firebase';
+	import { addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
+
+	const TAGS = {
+		question: { glyph: '?', placeholder: 'what are you stuck on?' },
+		praise: { glyph: '+', placeholder: 'what worked for you?' },
+		correction: { glyph: '!', placeholder: "what's wrong or out of date? quote the line if you can" },
+		idea: { glyph: '*', placeholder: 'what should I add or cover next?' },
+	};
+	const TAG_KEYS = Object.keys(TAGS);
+	const COOLDOWN_MS = 60_000;
+
+	function init(root) {
+		const slug = root.dataset.slug;
+		const list = root.querySelector('#cm-list');
+		const total = root.querySelector('#cm-total');
+		const form = root.querySelector('#cm-form');
+		const text = root.querySelector('#cm-text');
+		const submit = root.querySelector('#cm-submit');
+		const statusEl = root.querySelector('#cm-status');
+		const chips = root.querySelectorAll('[data-filter]');
+		const tagButtons = root.querySelectorAll('[data-pick]');
+
+		let all = [];
+		let filter = 'all';
+		let tag = 'question';
+
+		// ---------- helpers ----------
+		// Everything is built with textContent, so visitors can never inject HTML.
+		function h(name, className, content) {
+			const el = document.createElement(name);
+			if (className) el.className = className;
+			if (content !== undefined) el.textContent = content;
+			return el;
+		}
+
+		// Short, stable, git-looking id made from the Firestore doc id.
+		function hash(str) {
+			let x = 2166136261;
+			for (let i = 0; i < str.length; i++) {
+				x ^= str.charCodeAt(i);
+				x = Math.imul(x, 16777619);
+			}
+			return (x >>> 0).toString(16).padStart(8, '0').slice(0, 7);
+		}
+
+		function ago(date) {
+			const s = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+			if (s < 60) return 'just now';
+			const m = Math.floor(s / 60);
+			if (m < 60) return m + (m === 1 ? ' minute ago' : ' minutes ago');
+			const hr = Math.floor(m / 60);
+			if (hr < 24) return hr + (hr === 1 ? ' hour ago' : ' hours ago');
+			const d = Math.floor(hr / 24);
+			if (d < 30) return d + (d === 1 ? ' day ago' : ' days ago');
+			return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+		}
+
+		function statusOf(c) {
+			if (c.tag === 'question') {
+				const done = c.status === 'answered' || !!c.reply;
+				return { done, text: done ? '✓ answered' : '○ open' };
+			}
+			if (c.tag === 'correction') {
+				const done = c.status === 'fixed';
+				return { done, text: done ? '✓ fixed' : '○ open' };
+			}
+			return null;
+		}
+
+		// ---------- drawing ----------
+		function buildComment(c) {
+			const li = h('li', 'cm-item');
+
+			const head = h('div', 'cm-head');
+			head.append(h('span', 'cm-muted', 'commit ' + hash(c.id)));
+			const tagEl = h('span', 'cm-tag', '[' + TAGS[c.tag].glyph + '] ' + c.tag);
+			tagEl.dataset.tag = c.tag;
+			head.append(tagEl);
+			const st = statusOf(c);
+			if (st) head.append(h('span', 'cm-state ' + (st.done ? 'is-done' : 'is-open'), st.text));
+
+			const meta = h('div', 'cm-meta');
+			meta.append('Author: ', h('span', 'cm-name', c.name || 'anonymous'), ' · ' + ago(c.createdAt));
+
+			li.append(head, meta, h('div', 'cm-msg', c.message));
+
+			if (c.reply) {
+				const reply = h('div', 'cm-reply');
+				const rh = h('div', 'cm-reply-head');
+				rh.append(
+					h('span', 'cm-branch', '└─'),
+					h('span', 'cm-muted', 'commit ' + hash(c.id + 'r')),
+					h('span', 'cm-name', 'hamza'),
+					h('span', 'cm-badge', 'author'),
+				);
+				if (c.repliedAt) rh.append(h('span', 'cm-muted', ago(c.repliedAt)));
+				reply.append(rh, h('div', 'cm-reply-msg', c.reply));
+				li.append(reply);
+			}
+			return li;
+		}
+
+		function render() {
+			total.textContent = String(all.length);
+			chips.forEach((b) => {
+				const key = b.dataset.filter;
+				const n = key === 'all' ? all.length : all.filter((c) => c.tag === key).length;
+				b.querySelector('.cm-n').textContent = String(n);
+				b.setAttribute('aria-pressed', String(filter === key));
+			});
+
+			const shown = filter === 'all' ? all : all.filter((c) => c.tag === filter);
+			if (!shown.length) {
+				const msg = all.length
+					? 'nothing tagged [' + TAGS[filter].glyph + '] ' + filter + ' yet.'
+					: 'no comments yet. be the first to commit one.';
+				list.replaceChildren(h('li', 'cm-empty', msg));
+				return;
+			}
+			list.replaceChildren(...shown.map(buildComment));
+		}
+
+		// ---------- live feed ----------
+		// One simple query (no extra index needed); newest-first sorting happens here.
+		const q = query(collection(db, 'comments'), where('slug', '==', slug), limit(300));
+		onSnapshot(
+			q,
+			(snap) => {
+				all = [];
+				snap.forEach((d) => {
+					const x = d.data({ serverTimestamps: 'estimate' });
+					if (!TAG_KEYS.includes(x.tag) || x.hidden === true) return;
+					all.push({
+						id: d.id,
+						tag: x.tag,
+						name: typeof x.name === 'string' ? x.name.trim() : '',
+						message: String(x.message ?? ''),
+						status: typeof x.status === 'string' ? x.status : '',
+						reply: typeof x.reply === 'string' ? x.reply.trim() : '',
+						createdAt: x.createdAt && x.createdAt.toDate ? x.createdAt.toDate() : new Date(),
+						repliedAt: x.repliedAt && x.repliedAt.toDate ? x.repliedAt.toDate() : null,
+					});
+				});
+				all.sort((a, b) => b.createdAt - a.createdAt);
+				render();
+			},
+			() => {
+				list.replaceChildren(h('li', 'cm-empty', "can't reach the comments right now, try again later."));
+			},
+		);
+
+		// ---------- filter + tag pickers ----------
+		chips.forEach((b) =>
+			b.addEventListener('click', () => {
+				filter = b.dataset.filter;
+				render();
+			}),
+		);
+		tagButtons.forEach((b) =>
+			b.addEventListener('click', () => {
+				tag = b.dataset.pick;
+				tagButtons.forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+				text.placeholder = TAGS[tag].placeholder;
+			}),
+		);
+
+		// ---------- posting ----------
+		function setStatus(t) {
+			statusEl.textContent = t;
+		}
+
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const fd = new FormData(form);
+
+			// Bot trap filled in: pretend it worked, store nothing.
+			if (fd.get('website')) {
+				form.reset();
+				setStatus('> comment committed. thanks!');
+				return;
+			}
+
+			const message = String(fd.get('message') ?? '').trim();
+			const name = String(fd.get('name') ?? '').trim().slice(0, 30);
+			if (!message) {
+				setStatus('> write something first.');
+				return;
+			}
+
+			let last = 0;
+			try {
+				last = Number(localStorage.getItem('cm_last') ?? 0);
+			} catch {}
+			if (Date.now() - last < COOLDOWN_MS) {
+				setStatus('> easy there, give it a minute before the next comment.');
+				return;
+			}
+
+			submit.disabled = true;
+			try {
+				await addDoc(collection(db, 'comments'), {
+					slug,
+					tag,
+					name,
+					message,
+					createdAt: serverTimestamp(),
+				});
+				try {
+					localStorage.setItem('cm_last', String(Date.now()));
+				} catch {}
+				form.reset();
+				setStatus('> comment committed. thanks!');
+			} catch {
+				setStatus('> something went wrong, try again in a bit.');
+			} finally {
+				submit.disabled = false;
+			}
+		});
+	}
+
+	document.querySelectorAll('[data-comments]').forEach(init);
+</script>
+
+<style is:global>
+	.cm {
+		--accent: #3ddc84;
+		--panel: #0f1115;
+		--panel-raised: #161a21;
+		--panel-form: #12151b;
+		--line: #1f242c;
+		--text: #e6e9ef;
+		--muted: #7d8594;
+		width: 720px;
+		max-width: calc(100% - 2em);
+		margin: 4rem auto 0;
+		padding: 0 1em 2.5rem;
+		box-sizing: content-box;
+		font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+		color: rgb(var(--gray-dark));
+		text-align: left;
+	}
+	.cm *,
+	.cm *::before,
+	.cm *::after {
+		box-sizing: border-box;
+	}
+
+	/* tag colours: each one differs in lightness as well as hue, and always has a symbol + word too */
+	.cm [data-tag='all'] {
+		--tc: #e6e9ef;
+		--tc-bg: rgba(230, 233, 239, 0.13);
+	}
+	.cm [data-tag='question'] {
+		--tc: #5ac8fa;
+		--tc-bg: rgba(90, 200, 250, 0.13);
+	}
+	.cm [data-tag='praise'] {
+		--tc: #3ddc84;
+		--tc-bg: rgba(61, 220, 132, 0.13);
+	}
+	.cm [data-tag='correction'] {
+		--tc: #f5a524;
+		--tc-bg: rgba(245, 165, 36, 0.13);
+	}
+	.cm [data-tag='idea'] {
+		--tc: #c792ea;
+		--tc-bg: rgba(199, 146, 234, 0.13);
+	}
+
+	.cm-intro h2 {
+		margin: 0 0 12px;
+		font-size: 1.5rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		line-height: 1.2;
+		color: rgb(var(--black));
+	}
+	.cm-intro p {
+		margin: 0 0 28px;
+		font-size: 15px;
+		line-height: 1.6;
+		color: rgb(var(--gray-dark));
+		max-width: 560px;
+	}
+
+	.cm-panel {
+		background: var(--panel);
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		overflow: hidden;
+	}
+	:root[data-theme='dark'] .cm-panel {
+		border-color: #2f3644;
+	}
+	.cm-titlebar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 14px 20px;
+		background: var(--panel-raised);
+		border-bottom: 1px solid var(--line);
+		font-size: 12px;
+		color: #9aa3b2;
+	}
+	.cm-dots {
+		display: flex;
+		gap: 8px;
+	}
+	.cm-dots span {
+		width: 11px;
+		height: 11px;
+		border-radius: 50%;
+		background: #3a404b;
+	}
+	.cm-file {
+		font-size: 13px;
+	}
+	.cm-live {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.cm-dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: var(--accent);
+	}
+
+	.cm-label {
+		font-size: 13px;
+		color: var(--muted);
+		margin-right: 4px;
+	}
+	.cm-filters,
+	.cm-tags {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.cm-filters {
+		padding: 14px 20px;
+	}
+	.cm-chip,
+	.cm-tagbtn {
+		font: inherit;
+		font-size: 13px;
+		min-height: 44px;
+		padding: 10px 14px;
+		color: #9aa3b2;
+		background: transparent;
+		border: 1px solid #2a303a;
+		cursor: pointer;
+	}
+	.cm-chip {
+		border-radius: 999px;
+	}
+	.cm-tagbtn {
+		border-radius: 8px;
+	}
+	.cm-chip[aria-pressed='true'],
+	.cm-tagbtn[aria-pressed='true'] {
+		color: var(--tc);
+		border-color: var(--tc);
+		background: var(--tc-bg);
+		font-weight: 700;
+	}
+	.cm-n {
+		opacity: 0.7;
+	}
+
+	.cm-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.cm-empty {
+		padding: 18px 20px;
+		border-top: 1px solid var(--line);
+		font-size: 14px;
+		color: var(--muted);
+	}
+	.cm-item {
+		padding: 18px 20px;
+		border-top: 1px solid var(--line);
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		font-size: 14px;
+		line-height: 1.5;
+	}
+	.cm-head {
+		display: flex;
+		align-items: baseline;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
+	.cm-muted {
+		color: var(--muted);
+	}
+	.cm-tag {
+		color: var(--tc);
+		font-weight: 700;
+	}
+	.cm-state {
+		margin-left: auto;
+		font-size: 13px;
+	}
+	.cm-state.is-done {
+		color: var(--accent);
+	}
+	.cm-state.is-open {
+		color: var(--muted);
+	}
+	.cm-meta {
+		color: var(--muted);
+		font-size: 13px;
+	}
+	.cm-name {
+		color: var(--text);
+	}
+	.cm-msg {
+		color: var(--text);
+		padding-left: 28px;
+		margin-top: 4px;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+	.cm-reply {
+		margin-top: 8px;
+		padding-left: 28px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.cm-reply-head {
+		display: flex;
+		gap: 10px;
+		align-items: baseline;
+		flex-wrap: wrap;
+		font-size: 13px;
+	}
+	.cm-branch {
+		color: #3a404b;
+	}
+	.cm-badge {
+		background: var(--accent);
+		color: #06210f;
+		font-weight: 700;
+		font-size: 11px;
+		padding: 2px 6px;
+		border-radius: 4px;
+	}
+	.cm-reply-msg {
+		color: var(--text);
+		padding-left: 28px;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+
+	.cm-form {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding: 20px;
+		background: var(--panel-form);
+		border-top: 1px solid var(--line);
+	}
+	.cm-form textarea,
+	.cm-form input {
+		font-family: inherit;
+		line-height: 1.5;
+		color: var(--text);
+		background: var(--panel);
+		border: 1px solid #2a303a;
+		border-radius: 8px;
+	}
+	.cm-form textarea {
+		display: block;
+		width: 100%;
+		padding: 12px 14px;
+		font-size: 14px;
+		resize: vertical;
+	}
+	.cm-form input {
+		width: 170px;
+		padding: 10px 12px;
+		font-size: 13px;
+	}
+	.cm-form textarea::placeholder,
+	.cm-form input::placeholder {
+		color: var(--muted);
+		opacity: 1;
+	}
+	.cm-hp {
+		position: absolute;
+		left: -9999px;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+	}
+	.cm-controls {
+		display: flex;
+		justify-content: flex-end;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.cm-submit {
+		font: inherit;
+		font-size: 13px;
+		font-weight: 700;
+		min-height: 44px;
+		padding: 11px 18px;
+		color: #06210f;
+		background: var(--accent);
+		border: 0;
+		border-radius: 8px;
+		cursor: pointer;
+	}
+	.cm-submit:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+	.cm-status {
+		margin: 0;
+		min-height: 1.5em;
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--accent);
+	}
+	.cm-form textarea:focus-visible,
+	.cm-form input:focus-visible,
+	.cm-chip:focus-visible,
+	.cm-tagbtn:focus-visible,
+	.cm-submit:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.cm-fine {
+		margin: 12px 0 0;
+		font-size: 12px;
+		line-height: 1.6;
+		color: rgb(var(--gray));
+	}
+
+	@media (max-width: 640px) {
+		.cm-item {
+			padding: 16px;
+		}
+		.cm-filters,
+		.cm-form {
+			padding: 16px;
+		}
+		.cm-msg,
+		.cm-reply {
+			padding-left: 16px;
+		}
+		.cm-reply-msg {
+			padding-left: 16px;
+		}
+		.cm-controls input {
+			flex: 1 1 140px;
+			width: auto;
+		}
+	}
+</style>
