@@ -1,0 +1,255 @@
+<button
+	type="button"
+	class="toggle"
+	role="switch"
+	aria-checked="false"
+	aria-label="Dark mode"
+	data-theme-toggle
+>
+	<span class="knob" aria-hidden="true">
+		<svg
+			class="icon sun"
+			viewBox="0 0 24 24"
+			width="18"
+			height="18"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+		>
+			<circle cx="12" cy="12" r="4" fill="currentColor"></circle>
+			<path
+				d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+			></path>
+		</svg>
+		<svg class="icon moon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+			<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+		</svg>
+	</span>
+</button>
+
+<script>
+	const root = document.documentElement;
+	const buttons = document.querySelectorAll('[data-theme-toggle]');
+	const isDark = () => root.dataset.theme === 'dark';
+
+	function sync() {
+		buttons.forEach((b) => b.setAttribute('aria-checked', String(isDark())));
+	}
+	sync();
+
+	// Click sound, synthesized with the Web Audio API (no audio file needed):
+	// a short noise "tick" for the contact + a quick low "thock" for the body.
+	// Dark = slightly deeper click, light = slightly sharper click.
+	let audioCtx;
+	function playClick(toDark) {
+		audioCtx = audioCtx || new AudioContext();
+		const ctx = audioCtx;
+		if (ctx.state === 'suspended') ctx.resume();
+		const t = ctx.currentTime;
+
+		const len = Math.floor(ctx.sampleRate * 0.03);
+		const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+		const data = buf.getChannelData(0);
+		for (let i = 0; i < len; i++) {
+			data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+		}
+		const noise = ctx.createBufferSource();
+		noise.buffer = buf;
+		const hp = ctx.createBiquadFilter();
+		hp.type = 'highpass';
+		hp.frequency.value = toDark ? 1800 : 2600;
+		const noiseGain = ctx.createGain();
+		noiseGain.gain.value = 0.45;
+		noise.connect(hp);
+		hp.connect(noiseGain);
+		noiseGain.connect(ctx.destination);
+		noise.start(t);
+
+		const osc = ctx.createOscillator();
+		osc.type = 'sine';
+		osc.frequency.setValueAtTime(toDark ? 170 : 230, t);
+		osc.frequency.exponentialRampToValueAtTime(60, t + 0.06);
+		const oscGain = ctx.createGain();
+		oscGain.gain.setValueAtTime(0.0001, t);
+		oscGain.gain.exponentialRampToValueAtTime(0.5, t + 0.004);
+		oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+		osc.connect(oscGain);
+		oscGain.connect(ctx.destination);
+		osc.start(t);
+		osc.stop(t + 0.1);
+	}
+
+	buttons.forEach((b) => {
+		b.addEventListener('click', () => {
+			const next = isDark() ? 'light' : 'dark';
+			root.dataset.theme = next;
+			try {
+				localStorage.setItem('theme', next);
+			} catch {}
+			sync();
+			try {
+				playClick(next === 'dark');
+			} catch {}
+		});
+	});
+</script>
+
+<style>
+	.toggle {
+		--w: 76px;
+		--h: 40px;
+		--pad: 4px;
+		--k: calc(var(--h) - var(--pad) * 2);
+		--travel: calc(var(--w) - var(--k) - var(--pad) * 2);
+		position: relative;
+		flex: 0 0 auto;
+		width: var(--w);
+		height: var(--h);
+		padding: 0;
+		border: 0;
+		border-radius: 999px;
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		/* light: a shallow silver groove */
+		background: linear-gradient(180deg, #c9d0db 0%, #e8ecf2 100%);
+		box-shadow:
+			inset 0 2px 5px rgba(20, 30, 50, 0.3),
+			inset 0 -1px 1px rgba(255, 255, 255, 0.9),
+			0 1px 0 rgba(255, 255, 255, 0.9),
+			0 0 0 1px rgba(20, 30, 50, 0.1);
+		transition: box-shadow 0.4s ease;
+	}
+	/* dark track: a layer on top that fades in */
+	.toggle::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: linear-gradient(180deg, #06080c 0%, #1a1f29 100%);
+		box-shadow:
+			inset 0 3px 7px rgba(0, 0, 0, 0.8),
+			inset 0 -1px 1px rgba(255, 255, 255, 0.07);
+		opacity: 0;
+		transition: opacity 0.4s ease;
+	}
+	/* bigger invisible tap area (about 48px tall) */
+	.toggle::after {
+		content: '';
+		position: absolute;
+		inset: -4px;
+		border-radius: 999px;
+	}
+	.toggle:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 3px;
+	}
+
+	.knob {
+		position: absolute;
+		top: var(--pad);
+		left: var(--pad);
+		width: var(--k);
+		height: var(--k);
+		display: grid;
+		place-items: center;
+		border-radius: 50%;
+		background: radial-gradient(circle at 35% 28%, #ffffff 0%, #eef1f6 45%, #c5ccd8 100%);
+		box-shadow:
+			0 3px 6px rgba(20, 30, 50, 0.35),
+			0 1px 1px rgba(20, 30, 50, 0.3),
+			inset 0 1px 1px #ffffff;
+		translate: 0 0;
+		transition:
+			translate 0.45s cubic-bezier(0.3, 1.5, 0.5, 1),
+			scale 0.12s ease,
+			box-shadow 0.4s ease;
+	}
+	.toggle:active .knob {
+		scale: 0.92;
+	}
+	/* dark knob: a layer that fades in over the silver one */
+	.knob::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		background: radial-gradient(circle at 35% 28%, #5a6478 0%, #272d3a 55%, #12151c 100%);
+		opacity: 0;
+		transition: opacity 0.4s ease;
+	}
+
+	.icon {
+		grid-area: 1 / 1;
+		position: relative;
+		z-index: 1;
+		transition:
+			opacity 0.3s ease,
+			rotate 0.45s ease,
+			scale 0.45s ease;
+	}
+	.sun {
+		color: #d97706;
+	}
+	.moon {
+		color: #e4ecff;
+		opacity: 0;
+		rotate: -50deg;
+		scale: 0.5;
+		filter: drop-shadow(0 0 4px rgba(150, 190, 255, 0.9));
+	}
+
+	/* ---- dark state (set on <html> before first paint, so no flash) ---- */
+	:global(:root[data-theme='dark']) .toggle {
+		box-shadow:
+			0 0 0 1px #2b323d,
+			0 1px 0 rgba(255, 255, 255, 0.06);
+	}
+	:global(:root[data-theme='dark']) .toggle::before {
+		opacity: 1;
+	}
+	:global(:root[data-theme='dark']) .knob {
+		translate: var(--travel) 0;
+		box-shadow:
+			0 0 14px rgba(140, 180, 255, 0.4),
+			0 3px 6px rgba(0, 0, 0, 0.7),
+			inset 0 1px 1px rgba(255, 255, 255, 0.25);
+	}
+	:global(:root[data-theme='dark']) .knob::before {
+		opacity: 1;
+	}
+	:global(:root[data-theme='dark']) .sun {
+		opacity: 0;
+		rotate: 50deg;
+		scale: 0.5;
+	}
+	:global(:root[data-theme='dark']) .moon {
+		opacity: 1;
+		rotate: 0deg;
+		scale: 1;
+	}
+
+	@media (max-width: 720px) {
+		.toggle {
+			--w: 56px;
+			--h: 32px;
+			--pad: 3px;
+		}
+		.toggle::after {
+			inset: -6px;
+		}
+		.icon {
+			width: 15px;
+			height: 15px;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.toggle,
+		.toggle::before,
+		.knob,
+		.knob::before,
+		.icon {
+			transition: none;
+		}
+	}
+</style>
