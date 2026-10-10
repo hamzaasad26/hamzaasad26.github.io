@@ -3,6 +3,9 @@ title: 'MultiMind: Four AI Agents That Find and Fix Bugs in Python Code'
 description: A LangGraph multi-agent system where a Planner, Coder, Tester and Reviewer repair Python bugs with a retry loop. 25/25 cases fixed, but a single LLM call did just as well on the easy ones.
 pubDate: 2026-01-20
 heroImage: ''
+tags: ["meta"]
+artKind: "dither"
+artInk: "#5ac8fa"
 ---
 
 Here's the short version of MultiMind: you paste in some broken Python and a description of what's going wrong, and four AI agents pass it around until it's fixed. A Planner figures out where the bug is, a Coder rewrites the code, a Tester runs it, and a Reviewer decides whether it's good enough or needs another go.

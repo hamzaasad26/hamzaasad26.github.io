@@ -1,87 +1,116 @@
 ---
-import { Image } from 'astro:assets';
 import { getCollection } from 'astro:content';
 import BaseHead from '../../components/BaseHead.astro';
+import CoverArt from '../../components/CoverArt.astro';
 import Footer from '../../components/Footer.astro';
 import FormattedDate from '../../components/FormattedDate.astro';
 import Header from '../../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+import { pickArt } from '../../lib/coverArt';
 
-const posts = (await getCollection('blog')).sort(
-	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
+const readMins = (body?: string) =>
+	Math.max(1, Math.ceil((body ?? '').split(/\s+/).filter(Boolean).length / 200));
+
+const posts = (await getCollection('blog'))
+	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+	.map((post) => {
+		const fallback = pickArt(post.data.title);
+		return {
+			post,
+			kind: post.data.artKind ?? fallback.kind,
+			ink: post.data.artInk ?? fallback.ink,
+			mins: readMins(post.body),
+		};
+	});
 ---
 
 <!doctype html>
 <html lang="en">
 	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<BaseHead title={`Blog | ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
 		<style>
 			main {
-				width: 960px;
+				width: 100%;
+				max-width: 880px;
+				margin: 0 auto;
+				padding: 2rem 1rem 4rem;
 			}
-			ul {
+			h1 {
+				font-size: clamp(2.125rem, 1.6rem + 1.2vw, 2.5rem);
+				letter-spacing: -0.02em;
+				line-height: 1.2;
+				margin: 0 0 1.5rem;
+				color: rgb(var(--black));
+			}
+			.list {
 				display: flex;
-				flex-wrap: wrap;
-				gap: 2rem;
-				list-style-type: none;
-				margin: 0;
-				padding: 0;
+				flex-direction: column;
 			}
-			ul li {
-				width: calc(50% - 1rem);
-			}
-			ul li * {
+			.row {
+				display: grid;
+				grid-template-columns: 32px minmax(0, 1fr) auto;
+				grid-template-areas: 'badge body meta';
+				column-gap: 14px;
+				align-items: start;
+				padding: 16px 0;
+				border-top: 1px solid color-mix(in srgb, rgb(var(--gray)) 40%, transparent);
 				text-decoration: none;
-				transition: 0.2s ease;
 			}
-			ul li:first-child {
-				width: 100%;
-				margin-bottom: 1rem;
-				text-align: center;
+			.row:last-child {
+				border-bottom: 1px solid color-mix(in srgb, rgb(var(--gray)) 40%, transparent);
 			}
-			ul li:first-child img {
-				width: 100%;
+			.badge {
+				grid-area: badge;
+				display: flex;
 			}
-			ul li:first-child .title {
-				font-size: 2.369rem;
+			.body {
+				grid-area: body;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				min-width: 0;
 			}
-			ul li img {
-				margin-bottom: 0.5rem;
-				border-radius: 12px;
+			.meta {
+				grid-area: meta;
+				padding-top: 2px;
+				white-space: nowrap;
 			}
-			ul li a {
-				display: block;
+			.mono {
+				font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+				font-size: 12px;
+				color: rgb(var(--gray));
 			}
 			.title {
 				margin: 0;
+				font-size: 1.0625rem;
+				line-height: 1.3;
+				font-weight: 700;
+				letter-spacing: -0.01em;
 				color: rgb(var(--black));
-				line-height: 1;
+				transition: color 0.2s ease;
 			}
-			.date {
+			.excerpt {
 				margin: 0;
-				color: rgb(var(--gray));
+				font-size: 14px;
+				line-height: 1.5;
+				color: color-mix(in srgb, rgb(var(--gray-dark)) 80%, transparent);
 			}
-			ul li a:hover h4,
-			ul li a:hover .date {
+			.tags {
+				margin-top: 2px;
+			}
+			.row:hover .title {
 				color: rgb(var(--accent));
 			}
-			ul a:hover img {
-				box-shadow: var(--box-shadow);
-			}
-			@media (max-width: 720px) {
-				ul {
-					gap: 0.5em;
+			@media (max-width: 600px) {
+				.row {
+					grid-template-columns: 32px minmax(0, 1fr);
+					grid-template-areas:
+						'badge meta'
+						'badge body';
+					row-gap: 4px;
 				}
-				ul li {
-					width: 100%;
-					text-align: center;
-				}
-				ul li:first-child {
-					margin-bottom: 0;
-				}
-				ul li:first-child .title {
-					font-size: 1.563em;
+				.meta {
+					padding-top: 0;
 				}
 			}
 		</style>
@@ -89,23 +118,26 @@ const posts = (await getCollection('blog')).sort(
 	<body>
 		<Header />
 		<main>
-			<section>
-				<ul>
-					{posts.map((post) => (
-						<li>
-							<a href={`/blog/${post.id}/`}>
-								{post.data.heroImage && (
-									<Image width={720} height={360} src={post.data.heroImage} alt="" />
-								)}
-								<h4 class="title">{post.data.title}</h4>
-								<p class="date">
-									<FormattedDate date={post.data.pubDate} />
-								</p>
-							</a>
-						</li>
-					))}
-				</ul>
-			</section>
+			<h1>Blog</h1>
+			<div class="list">
+				{posts.map(({ post, kind, ink, mins }) => (
+					<a class="row" href={`/blog/${post.id}/`}>
+						<span class="badge">
+							<CoverArt title={post.data.title} kind={kind} ink={ink} size={32} />
+						</span>
+						<span class="meta mono">
+							<FormattedDate date={post.data.pubDate} /> · {mins} min read
+						</span>
+						<span class="body">
+							<h2 class="title">{post.data.title}</h2>
+							<p class="excerpt">{post.data.description}</p>
+							{post.data.tags.length > 0 && (
+								<span class="tags mono">{post.data.tags.join(' · ')}</span>
+							)}
+						</span>
+					</a>
+				))}
+			</div>
 		</main>
 		<Footer />
 	</body>
