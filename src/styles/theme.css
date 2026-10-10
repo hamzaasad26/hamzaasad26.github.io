@@ -26,3 +26,34 @@
 :root[data-theme='dark'] body {
 	background-color: #0d1016;
 }
+
+/* ---------- Text size ----------
+   Fluid sizes: roughly the template's default on a laptop (wide screens),
+   shrinking smoothly toward phone size. Body ~16px on phones, 20px on laptops.
+   Tweak a size by changing the first number (phone) or the last one (laptop). */
+body {
+	font-size: clamp(1rem, 0.88rem + 0.54vw, 1.25rem);
+}
+h1 {
+	font-size: clamp(2rem, 1.125rem + 3.9vw, 3.8rem);
+}
+h2 {
+	font-size: clamp(1.6rem, 0.89rem + 3.1vw, 3.05rem);
+}
+h3 {
+	font-size: clamp(1.35rem, 0.82rem + 2.35vw, 2.44rem);
+}
+h4 {
+	font-size: clamp(1.15rem, 0.76rem + 1.73vw, 1.95rem);
+}
+
+/* iPhones zoom the whole page when you tap a text box whose text is under 16px,
+   so the comment and feedback boxes use 16px on phones. */
+@media (max-width: 640px) {
+	.cm .cm-form textarea,
+	.cm .cm-form input,
+	.feedback form textarea,
+	.feedback form input {
+		font-size: 16px;
+	}
+}
