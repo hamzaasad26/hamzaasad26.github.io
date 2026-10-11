@@ -83,7 +83,7 @@ const photos = await Promise.all(
 										widths={[300, 500, 700]}
 										sizes="(max-width: 700px) 45vw, 280px"
 										quality={65}
-										loading="eager"
+										loading={i < 6 ? 'eager' : 'lazy'}
 										decoding="async"
 										draggable="false"
 									/>
@@ -215,7 +215,6 @@ const photos = await Promise.all(
 	.pw-col-in {
 		position: relative;
 		padding-top: 24px;
-		
 	}
 
 	.pw-item {
@@ -411,7 +410,7 @@ const photos = await Promise.all(
 		const wrap = document.createElement('div');
 		wrap.className = 'pw-cols';
 
-		const nCols = () => (innerWidth <= 700 ? 2 : innerWidth <= 900 ? 2 :3);
+		const nCols = () => (innerWidth <= 700 ? 2 : 3);
 
 		function build() {
 			curN = nCols();
@@ -446,7 +445,8 @@ const photos = await Promise.all(
 				const first = copy()[0];
 				c.period = Math.max(1, first.offsetTop - set[0].offsetTop);
 				let total = 2 * c.period;
-				while (total < c.period + win.clientHeight + 60) {
+				let guard = 0; // safety stop so this can never run away
+				while (total < c.period + win.clientHeight + 60 && guard++ < 4) {
 					copy();
 					total += c.period;
 				}
@@ -477,14 +477,25 @@ const photos = await Promise.all(
 			requestAnimationFrame(tick);
 		};
 
-		build();
-		requestAnimationFrame(tick);
-		new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(root);
-		let rt: number | undefined;
-		addEventListener('resize', () => {
-			clearTimeout(rt);
-			rt = window.setTimeout(() => nCols() !== curN && build(), 150);
-		});
+		// phones keep a plain scrolling window (light on memory); bigger screens get the endless wall
+		const endless = matchMedia('(min-width: 701px)').matches;
+		if (endless) {
+			try {
+				root.querySelectorAll('img').forEach((im) => (im.loading = 'eager'));
+				build();
+				requestAnimationFrame(tick);
+				new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(root);
+				let rt: number | undefined;
+				addEventListener('resize', () => {
+					clearTimeout(rt);
+					rt = window.setTimeout(() => nCols() !== curN && build(), 150);
+				});
+			} catch (err) {
+				console.error(err);
+			}
+		} else {
+			hint.textContent = 'Scroll the photos, tap one to open it';
+		}
 
 		/* click the wall = pause / play */
 		const setStopped = (v: boolean) => {
@@ -570,7 +581,7 @@ const photos = await Promise.all(
 			if (card) {
 				show(Number(card.dataset.i));
 				dlg.showModal();
-			} else {
+			} else if (endless) {
 				setStopped(!stopped);
 			}
 		});
