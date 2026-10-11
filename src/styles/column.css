@@ -3,7 +3,7 @@
 
 main.page {
 	--hl: rgba(var(--gray), 0.09);
-	--pad: 8px;
+	--pad: 6px;
 	width: 100%;
 	max-width: 100%;
 	margin: 0;
@@ -17,7 +17,7 @@ main.page {
 .page .col {
 	position: relative;
 	width: 100%;
-	max-width: 940px;
+	max-width: 680px;
 	margin: 0 auto;
 }
 .page .col::before,
@@ -35,14 +35,14 @@ main.page {
 	right: 0;
 }
 .page .col::after {
-	left: -30px;
-	right: -30px;
+	left: -20px;
+	right: -20px;
 }
 
 /* top band with the page title, hairline underneath across the whole screen */
 .page .band {
 	position: relative;
-	padding: 28px var(--pad) 20px;
+	padding: 20px var(--pad) 14px;
 }
 .page .band::after {
 	content: '';
@@ -56,7 +56,7 @@ main.page {
 }
 .page .band h1 {
 	margin: 0;
-	font-size: clamp(28px, 20px + 1.6vw, 38px);
+	font-size: clamp(24px, 18px + 1.2vw, 32px);
 	line-height: 1.15;
 	letter-spacing: -0.02em;
 	color: rgb(var(--black));
@@ -69,8 +69,8 @@ main.page {
 }
 .page .text p {
 	margin: 0 0 20px;
-	font-size: 15px;
-	line-height: 28px;
+	font-size: 13px;
+	line-height: 24px;
 }
 
 /* section heading: hairline above and below, full screen width (same as blog h2) */
@@ -80,12 +80,12 @@ main.page {
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	margin: 36px 0 0;
+	margin: 26px 0 0;
 	padding: 8px var(--pad);
 }
 .page .sec-head h2 {
 	margin: 0;
-	font-size: clamp(24px, 18px + 1vw, 34px);
+	font-size: clamp(20px, 16px + 0.8vw, 26px);
 	font-weight: 500;
 	line-height: 1.1;
 	letter-spacing: -0.02em;
@@ -134,3 +134,28 @@ main.page {
 		font-size: 24px;
 	}
 }
+
+/* tweak:start */
+body, button, input, textarea { font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+.page { --pad: 30px; }
+@media (min-width: 721px) {
+	.page .col { max-width: 770px; }
+	.page .text, .page .text p {
+		font-size: 14px;
+		line-height: 22.4px;
+		font-weight: 500;
+		letter-spacing: -0.031em;
+	}
+	.page .band h1 {
+		font-size: 30px; line-height: 36px;
+		font-weight: 500; letter-spacing: -0.035em;
+	}
+	.page .text { padding-bottom: 0; }
+	.page .text p:last-child { margin-bottom: 0; }
+	.page .sec-head { margin-top: 48px; }
+	.page .sec-head h2 {
+		font-size: 30px; line-height: 36px;
+		font-weight: 500; letter-spacing: -0.035em;
+	}
+}
+/* tweak:end */

@@ -17,7 +17,7 @@ const modules = import.meta.glob<{ default: ImageMetadata }>(
 	{ eager: true }
 );
 
-const AUTO_SPEED = 0.35; // pixels per frame the wall drifts by itself. 0 turns it off.
+const AUTO_SPEED = 1.1; // pixels per frame the wall drifts by itself. 0 turns it off.
 
 // look of each polaroid: repeats down the list so the wall feels scattered, not gridded
 // width = how much of its column a photo fills (%), shift = how far it sits from the column's left edge (%)
@@ -94,6 +94,8 @@ const photos = await Promise.all(
 					</ul>
 				</div>
 				<span class="pw-state" hidden>paused</span>
+				<i class="pw-plus tl">+</i><i class="pw-plus tr">+</i><i class="pw-plus bl">+</i><i class="pw-plus br">+</i>
+
 			</div>
 
 			<p class="pw-hint">Drag, click a photo, or click the wall to pause</p>
@@ -131,29 +133,22 @@ const photos = await Promise.all(
 		overflow: hidden;
 		position: relative;
 	}
-	/* soft fade at the top and bottom so photos slide in and out instead of being cut */
-	.pw-stage::before,
-	.pw-stage::after {
-		content: '';
-		position: absolute;
-		left: 0;
-		right: 0;
-		height: 36px;
-		z-index: 2;
-		pointer-events: none;
+	.pw-plus {
+	position: absolute;
+	z-index: 3;
+	font: normal 400 14px/1 'JetBrains Mono', ui-monospace, monospace;
+	color: rgb(var(--gray));
+	pointer-events: none;
+	user-select: none;
 	}
-	.pw-stage::before {
-		top: 0;
-		background: linear-gradient(180deg, rgba(var(--gray-light), 0.95), transparent);
-	}
-	.pw-stage::after {
-		bottom: 0;
-		background: linear-gradient(0deg, rgba(var(--gray-light), 0.95), transparent);
-	}
+	.pw-plus.tl { top: 6px; left: 8px; }
+	.pw-plus.tr { top: 6px; right: 8px; }
+	.pw-plus.bl { bottom: 6px; left: 8px; }
+	.pw-plus.br { bottom: 6px; right: 8px; }
 	.pw-state {
 		position: absolute;
 		top: 12px;
-		right: 12px;
+		right: 30px;
 		z-index: 3;
 		padding: 3px 9px;
 		border-radius: 999px;
@@ -169,7 +164,7 @@ const photos = await Promise.all(
 
 	/* the window: plain scrolling until the script takes over, then an endless loop */
 	.pw-win {
-		height: 560px;
+		height: 460px;
 		overflow-y: auto;
 		overflow-x: hidden;
 		scrollbar-width: none;
