@@ -165,3 +165,31 @@ article .prose blockquote {
     font-size: 1.3rem;
   }
 }
+
+
+/* ---- Phone fix: no sideways scrolling ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+img,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+article .prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}

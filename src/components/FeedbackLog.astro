@@ -24,13 +24,32 @@ import '@fontsource/jetbrains-mono/700.css';
 			<div>epochs <strong id="fb-count">0</strong></div>
 		</div>
 
-		<ol class="log" id="fb-log">
-			<li class="row">
-				<span class="epoch">epoch 01</span>
-				<span class="sep" aria-hidden="true">|</span>
-				<span class="msg muted">loading the log...</span>
-			</li>
-		</ol>
+		<div class="logwrap">
+			<div
+				class="cell static"
+				id="fb-cell"
+				tabindex="0"
+				role="region"
+				aria-label="Feedback log, scrollable"
+			>
+				<ol class="log" id="fb-log">
+					<li class="row">
+						<span class="epoch">epoch 01</span>
+						<span class="sep" aria-hidden="true">|</span>
+						<span class="msg muted">loading the log...</span>
+					</li>
+				</ol>
+				<!-- Copies 2 and 3 only exist to make the endless loop seamless. -->
+				<ol class="log" id="fb-log2" aria-hidden="true" hidden></ol>
+				<ol class="log" id="fb-log3" aria-hidden="true" hidden></ol>
+			</div>
+			<svg class="hint up" id="fb-hint-up" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+				<path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+			</svg>
+			<svg class="hint down" id="fb-hint-down" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+				<path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+			</svg>
+		</div>
 
 		<form class="next" id="fb-form" autocomplete="off">
 			<div class="row input-row">
@@ -40,7 +59,7 @@ import '@fontsource/jetbrains-mono/700.css';
 					<span class="muted note-label">reader:</span>
 					<textarea
 						name="message"
-						rows="3"
+						rows="2"
 						maxlength="280"
 						required
 						aria-label="Your feedback note"
@@ -91,7 +110,14 @@ import '@fontsource/jetbrains-mono/700.css';
 
 	const pad = (n: number) => String(n).padStart(2, '0');
 
-	const log = document.getElementById('fb-log') as HTMLOListElement;
+	const cell = document.getElementById('fb-cell') as HTMLElement;
+	const copies = [
+		document.getElementById('fb-log'),
+		document.getElementById('fb-log2'),
+		document.getElementById('fb-log3'),
+	] as HTMLOListElement[];
+	const hintUp = document.getElementById('fb-hint-up') as unknown as SVGElement;
+	const hintDown = document.getElementById('fb-hint-down') as unknown as SVGElement;
 	const count = document.getElementById('fb-count') as HTMLElement;
 	const next = document.getElementById('fb-next') as HTMLElement;
 	const form = document.getElementById('fb-form') as HTMLFormElement;
@@ -99,10 +125,133 @@ import '@fontsource/jetbrains-mono/700.css';
 	const status = document.getElementById('fb-status') as HTMLElement;
 	const tpl = document.getElementById('fb-row') as HTMLTemplateElement;
 
+	/* ---------- auto-scroll settings (tweak these) ---------- */
+	const AUTO = 20; // px per second when nobody is hovering
+	const MAX = 170; // px per second at the very edge of the cell
+	const ZONE = 0.38; // top/bottom share of the cell that triggers scrolling
+
+	/* ---------- scroll state ---------- */
+	let pos = 0;
+	let last = 0;
+	let lastH = 0;
+	let looping = false;
+	let inside = false;
+	let my = 0;
+	let touching = false;
+	let focused = false;
+	let onScreen = true;
+	let pendingJump = false;
+	let touchTimer: number | undefined;
+	const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	const interacting = () => inside || touching || focused;
+
+	cell.addEventListener('pointerenter', (e) => {
+		if (e.pointerType === 'mouse') inside = true;
+	});
+	cell.addEventListener('pointermove', (e) => {
+		if (e.pointerType !== 'mouse') return;
+		inside = true;
+		my = e.clientY - cell.getBoundingClientRect().top;
+	});
+	cell.addEventListener('pointerleave', (e) => {
+		if (e.pointerType === 'mouse') inside = false;
+	});
+	cell.addEventListener(
+		'touchstart',
+		() => {
+			touching = true;
+			window.clearTimeout(touchTimer);
+		},
+		{ passive: true },
+	);
+	cell.addEventListener('touchend', () => {
+		window.clearTimeout(touchTimer);
+		touchTimer = window.setTimeout(() => (touching = false), 1800);
+	});
+	cell.addEventListener('focusin', () => (focused = true));
+	cell.addEventListener('focusout', () => (focused = false));
+	// Wheel, keyboard and touch scrolling: adopt wherever the user moved to.
+	cell.addEventListener('scroll', () => {
+		if (Math.abs(cell.scrollTop - pos) > 2) pos = cell.scrollTop;
+	});
+
+	if ('IntersectionObserver' in window) {
+		new IntersectionObserver(([entry]) => (onScreen = entry.isIntersecting)).observe(cell);
+	}
+
+	function setHints(up: boolean, down: boolean) {
+		hintUp.classList.toggle('on', up);
+		hintDown.classList.toggle('on', down);
+	}
+
+	function frame(t: number) {
+		const dt = last ? Math.min((t - last) / 1000, 0.05) : 0;
+		last = t;
+
+		const h = copies[0].offsetHeight;
+		const vh = cell.clientHeight;
+		const shouldLoop = h > vh + 2;
+
+		if (shouldLoop !== looping) {
+			// Enough notes to fill the cell: switch the loop on (or off again).
+			looping = shouldLoop;
+			cell.classList.toggle('static', !looping);
+			copies[1].hidden = copies[2].hidden = !looping;
+			pos = looping ? h : 0;
+			lastH = h;
+			cell.scrollTop = pos;
+		} else if (looping && h !== lastH) {
+			// Content height changed (new note, font loaded): keep the same spot in view.
+			pos = h + (pos - lastH);
+			lastH = h;
+		}
+
+		if (pendingJump) {
+			pendingJump = false;
+			if (looping) {
+				pos = 2 * h - vh;
+				lastH = h;
+				cell.scrollTop = pos;
+			}
+		}
+
+		if (looping && onScreen) {
+			let v = 0;
+			if (touching || focused) {
+				v = 0;
+			} else if (inside) {
+				const z = vh * ZONE;
+				if (my < z) v = -(1 - my / z) * MAX;
+				else if (my > vh - z) v = ((my - (vh - z)) / z) * MAX;
+			} else {
+				v = reduced ? 0 : AUTO;
+			}
+			setHints(inside && v < 0, inside && v > 0);
+
+			pos += v * dt;
+			if (pos >= 2 * h) pos -= h;
+			else if (pos < h) pos += h;
+			if (Math.abs(cell.scrollTop - pos) > 0.5) cell.scrollTop = pos;
+		} else {
+			setHints(false, false);
+		}
+
+		requestAnimationFrame(frame);
+	}
+	requestAnimationFrame(frame);
+
+	/* ---------- rows ---------- */
 	function makeRow(epoch: number) {
 		const li = tpl.content.firstElementChild!.cloneNode(true) as HTMLElement;
 		li.querySelector('.epoch')!.textContent = 'epoch ' + pad(epoch);
 		return li;
+	}
+
+	function renderRows(rows: HTMLElement[]) {
+		copies[0].replaceChildren(...rows);
+		copies[1].replaceChildren(...rows.map((r) => r.cloneNode(true)));
+		copies[2].replaceChildren(...rows.map((r) => r.cloneNode(true)));
 	}
 
 	function showMessageRow(text: string, epoch = 1) {
@@ -110,10 +259,12 @@ import '@fontsource/jetbrains-mono/700.css';
 		const msg = li.querySelector('.msg')!;
 		msg.textContent = text;
 		msg.classList.add('muted');
-		log.replaceChildren(li);
+		renderRows([li]);
 	}
 
 	// Live feed: every new note appears here without a reload.
+	const seen = new Set<string>();
+	let initialised = false;
 	const q = query(collection(db, 'feedback'), orderBy('createdAt', 'asc'), limitToLast(50));
 	onSnapshot(
 		q,
@@ -121,9 +272,12 @@ import '@fontsource/jetbrains-mono/700.css';
 			count.textContent = String(snap.size);
 			next.textContent = pad(snap.size + 1);
 			if (snap.empty) {
+				seen.clear();
+				initialised = true;
 				showMessageRow('waiting for the first note...');
 				return;
 			}
+			let hasNew = false;
 			const rows = snap.docs.map((d, i) => {
 				const data = d.data();
 				const li = makeRow(i + 1);
@@ -131,13 +285,22 @@ import '@fontsource/jetbrains-mono/700.css';
 				// textContent only, so visitors can never inject HTML.
 				li.querySelector('.who')!.textContent = name ? `reader (${name}):` : 'reader:';
 				li.querySelector('.text')!.textContent = `“${String(data.message ?? '')}”`;
+				if (initialised && !seen.has(d.id)) {
+					li.classList.add('new');
+					hasNew = true;
+				}
+				seen.add(d.id);
 				return li;
 			});
-			log.replaceChildren(...rows);
+			initialised = true;
+			renderRows(rows);
+			// Like tail -f: jump to the newest line, unless someone is reading the log.
+			if (hasNew && !interacting()) pendingJump = true;
 		},
 		() => showMessageRow("can't reach the log right now, try again later."),
 	);
 
+	/* ---------- form ---------- */
 	function setStatus(text: string) {
 		status.textContent = text;
 	}
@@ -162,11 +325,11 @@ import '@fontsource/jetbrains-mono/700.css';
 			return;
 		}
 
-		let last = 0;
+		let lastPost = 0;
 		try {
-			last = Number(localStorage.getItem('fb_last') ?? 0);
+			lastPost = Number(localStorage.getItem('fb_last') ?? 0);
 		} catch {}
-		if (Date.now() - last < COOLDOWN_MS) {
+		if (Date.now() - lastPost < COOLDOWN_MS) {
 			setStatus('> easy there, give it a minute before the next note.');
 			return;
 		}
@@ -281,10 +444,53 @@ import '@fontsource/jetbrains-mono/700.css';
 		font-weight: 700;
 	}
 
+	/* Fixed-size log: never grows, scrolls inside itself */
+	.logwrap {
+		position: relative;
+	}
+	.cell {
+		height: 200px;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: none;
+		-webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%);
+		mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%);
+	}
+	.cell::-webkit-scrollbar {
+		display: none;
+	}
+	.cell.static {
+		overflow: hidden;
+		-webkit-mask-image: none;
+		mask-image: none;
+	}
+	.cell:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: -2px;
+	}
+	.hint {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+		color: #9aa3b2;
+		opacity: 0;
+		transition: opacity 0.2s ease;
+		pointer-events: none;
+	}
+	.hint.on {
+		opacity: 0.9;
+	}
+	.hint.up {
+		top: 4px;
+	}
+	.hint.down {
+		bottom: 4px;
+	}
+
 	.log {
 		list-style: none;
 		margin: 0;
-		padding: 8px 0;
+		padding: 8px 0 12px;
 	}
 	.row {
 		display: flex;
@@ -293,6 +499,36 @@ import '@fontsource/jetbrains-mono/700.css';
 		padding: 9px 20px;
 		font-size: 14px;
 		line-height: 1.5;
+	}
+	.row.new {
+		animation:
+			fb-in 0.7s ease-out both,
+			fb-hl 2.4s ease-out both;
+	}
+	@keyframes fb-in {
+		from {
+			opacity: 0;
+			transform: translateY(8px);
+			filter: blur(3px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+			filter: none;
+		}
+	}
+	@keyframes fb-hl {
+		0% {
+			background: rgba(61, 220, 132, 0.14);
+		}
+		100% {
+			background: transparent;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.row.new {
+			animation: none;
+		}
 	}
 	.epoch {
 		flex: 0 0 76px;
@@ -316,7 +552,7 @@ import '@fontsource/jetbrains-mono/700.css';
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
-		padding: 20px;
+		padding: 20px 20px 12px;
 		background: var(--panel-form);
 		border-top: 1px solid var(--line);
 	}
@@ -406,11 +642,17 @@ import '@fontsource/jetbrains-mono/700.css';
 	}
 	.status {
 		margin: 0;
-		min-height: 1.5em;
+		margin-top: -16px; /* cancels the flex gap while the status is empty */
+		min-height: 0;
 		padding-left: 88px;
 		font-size: 13px;
 		line-height: 1.5;
 		color: var(--accent);
+	}
+	/* Space comes back only when a message is showing */
+	.status:not(:empty) {
+		margin-top: 0;
+		min-height: 1.5em;
 	}
 
 	.fine {
@@ -421,6 +663,9 @@ import '@fontsource/jetbrains-mono/700.css';
 	}
 
 	@media (max-width: 640px) {
+		.cell {
+			height: 200px;
+		}
 		.row {
 			flex-wrap: wrap;
 			row-gap: 2px;
