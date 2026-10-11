@@ -193,3 +193,50 @@ article .prose table {
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* ---- Article layout: centred, even margins (phone + desktop) ---- */
+main:has(article) {
+  width: 100% !important;
+  max-width: 760px !important;
+  margin: 0 auto !important;
+  padding: 2.5rem 1.25rem 4rem !important;
+}
+main:has(article) article,
+main:has(article) .prose {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+main:has(article) .prose {
+  font-size: 17px !important;
+  line-height: 1.65 !important;
+  text-align: left !important;
+}
+main:has(article) .prose > *,
+main:has(article) .prose p {
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  main:has(article) {
+    padding: 1.5rem 1.25rem 3rem !important;
+  }
+  main:has(article) .prose {
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+  }
+  main:has(article) .prose ul,
+  main:has(article) .prose ol {
+    padding-left: 1.25em !important;
+  }
+  main:has(article) .prose blockquote {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 1em !important;
+  }
+  main:has(article) .prose pre {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
