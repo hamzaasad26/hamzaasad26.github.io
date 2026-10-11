@@ -1,0 +1,594 @@
+---
+// Photos I've taken: an endless, draggable, self-drifting polaroid wall.
+//
+// HOW TO USE
+// 1. Put your photos (jpg/png/webp) in  src/assets/photos/
+// 2. Name each file like:   2022-a-bright-day-in-whistler.jpg
+//      -> caption "2022 ✦ a bright day in whistler"
+//    A file without a year ("golden-hour.jpg") gets just "golden hour".
+//    Start a name with a number + underscore to control the order: 01_2022-whistler.jpg
+//    (the number is hidden). Otherwise the order is alphabetical.
+//    Want no caption on a photo? Name it with a leading "_" , like  _03.jpg
+// 3. Add  <PhotoWall />  to src/pages/index.astro
+import { Image, getImage } from 'astro:assets';
+
+const modules = import.meta.glob<{ default: ImageMetadata }>(
+	'../assets/photos/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}',
+	{ eager: true }
+);
+
+const AUTO_SPEED = 0.35; // pixels per frame the wall drifts by itself. 0 turns it off.
+
+// look of each polaroid: repeats down the list so the wall feels scattered, not gridded
+// width = how much of its column a photo fills (%), shift = how far it sits from the column's left edge (%)
+const widths = [88, 100, 76, 94, 82, 98, 72, 90];
+const shifts = [10, 0, 22, 4, 14, 0, 26, 8];
+const tilts = [-3, 2, -1.5, 3, -2.5, 1.5, -1, 2.5];
+
+const files = Object.entries(modules)
+	.map(([path, mod]) => ({ path, name: path.split('/').pop()!.replace(/\.[^.]+$/, ''), img: mod.default }))
+	.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+const photos = await Promise.all(
+	files.map(async (f, i) => {
+		let name = f.name.replace(/^\d+_/, ''); // "01_" ordering prefix
+		let caption = '';
+		if (!name.startsWith('_')) {
+			const m = name.match(/^((?:19|20)\d{2})[-_ ]?(.*)$/);
+			const year = m ? m[1] : '';
+			const rest = (m ? m[2] : name).replace(/[-_]+/g, ' ').trim();
+			caption = [year, rest].filter(Boolean).join(' ✦ ');
+		}
+		const big = await getImage({ src: f.img, width: 1800, format: 'webp', quality: 82 });
+		return {
+			img: f.img,
+			caption,
+			big: big.src,
+			w: widths[(i * 3) % widths.length],
+			x: shifts[(i * 5) % shifts.length],
+			tilt: tilts[(i * 3) % tilts.length],
+			ratio: f.img.width / f.img.height,
+		};
+	})
+);
+---
+
+{
+	photos.length > 0 && (
+		<section class="pw" data-speed={AUTO_SPEED} aria-label="Photos I've taken">
+			<div class="sec-head">
+				<h2>Photos I've taken</h2>
+				<span class="pw-count">{photos.length} frames</span>
+			</div>
+
+			<div class="pw-stage">
+				<div class="pw-win" tabindex="0" aria-label="Photo wall. Drag to move, click to pause.">
+					<ul class="pw-track">
+						{photos.map((p, i) => (
+							<li
+								class="pw-item"
+								style={`--w:${p.w}%;--x:${p.x}%;--tilt:${p.tilt}deg;--ratio:${p.ratio};`}
+							>
+								<button
+									type="button"
+									class="pw-card"
+									data-i={i}
+									data-full={p.big}
+									data-caption={p.caption}
+									aria-label={p.caption ? `Open photo: ${p.caption}` : `Open photo ${i + 1}`}
+								>
+									<Image
+										src={p.img}
+										alt={p.caption || `Photo ${i + 1}`}
+										widths={[400, 700, 1000]}
+										sizes="(max-width: 700px) 45vw, 280px"
+										quality={72}
+										loading="eager"
+										decoding="async"
+										draggable="false"
+									/>
+									<span class="pw-cap">{p.caption}</span>
+								</button>
+							</li>
+						))}
+					</ul>
+				</div>
+				<span class="pw-state" hidden>paused</span>
+			</div>
+
+			<p class="pw-hint">Drag, click a photo, or click the wall to pause</p>
+
+			<dialog class="pw-lb" aria-label="Photo viewer">
+				<form method="dialog"><button class="pw-x" aria-label="Close">×</button></form>
+				<button type="button" class="pw-nav pw-prev" aria-label="Previous photo">‹</button>
+				<figure>
+					<img alt="" />
+					<figcaption></figcaption>
+				</figure>
+				<button type="button" class="pw-nav pw-next" aria-label="Next photo">›</button>
+			</dialog>
+		</section>
+	)
+}
+
+<style is:global>
+	.pw {
+		/* fills whatever column it is placed in, so it stays inside the page margins */
+		width: 100%;
+		margin: 0;
+	}
+	.pw-count {
+		font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+		font-size: 0.72rem;
+		color: rgb(var(--gray));
+	}
+
+	.pw-stage {
+		margin-top: 14px;
+		border-top: 1px solid var(--hl, rgba(var(--gray), 0.2));
+		border-bottom: 1px solid var(--hl, rgba(var(--gray), 0.2));
+		background: rgba(var(--gray-light), 0.55);
+		overflow: hidden;
+		position: relative;
+	}
+	/* soft fade at the top and bottom so photos slide in and out instead of being cut */
+	.pw-stage::before,
+	.pw-stage::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: 36px;
+		z-index: 2;
+		pointer-events: none;
+	}
+	.pw-stage::before {
+		top: 0;
+		background: linear-gradient(180deg, rgba(var(--gray-light), 0.95), transparent);
+	}
+	.pw-stage::after {
+		bottom: 0;
+		background: linear-gradient(0deg, rgba(var(--gray-light), 0.95), transparent);
+	}
+	.pw-state {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		z-index: 3;
+		padding: 3px 9px;
+		border-radius: 999px;
+		background: rgba(15, 17, 21, 0.78);
+		color: #e8ebf1;
+		font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+		font-size: 11px;
+		pointer-events: none;
+	}
+	.pw-state[hidden] {
+		display: none;
+	}
+
+	/* the window: plain scrolling until the script takes over, then an endless loop */
+	.pw-win {
+		height: 560px;
+		overflow-y: auto;
+		overflow-x: hidden;
+		scrollbar-width: none;
+		cursor: grab;
+		touch-action: pan-y; /* a swipe up/down on a phone still scrolls the page */
+		outline-offset: -3px;
+	}
+	.pw-win::-webkit-scrollbar {
+		display: none;
+	}
+	.pw-win.is-live {
+		overflow: hidden;
+	}
+	.pw-win.is-dragging {
+		cursor: grabbing;
+	}
+	.pw-win.is-dragging .pw-card {
+		pointer-events: none;
+	}
+
+	/* before the script runs (or without it): simple columns */
+	.pw-track {
+		list-style: none;
+		margin: 0;
+		padding: 34px 22px 60px;
+		column-count: 4;
+		column-gap: 14px;
+	}
+	/* the script's endless columns */
+	.pw-cols {
+		display: grid;
+		grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+		gap: 14px;
+		padding: 0 22px;
+		height: 100%;
+	}
+	.pw-col {
+		min-width: 0;
+		overflow: visible;
+	}
+	.pw-col-in {
+		position: relative;
+		padding-top: 24px;
+		will-change: transform;
+	}
+
+	.pw-item {
+		display: block;
+		break-inside: avoid;
+		width: var(--w);
+		margin: 0 0 -10px var(--x);
+		padding: 0;
+		transform: rotate(var(--tilt));
+		transition: transform 0.25s ease;
+	}
+	.pw-item:hover {
+		transform: rotate(0deg) scale(1.03);
+		z-index: 3;
+		position: relative;
+	}
+
+	/* matte paper print: square corners, no gloss, hardly any shadow */
+	.pw-card {
+		display: block;
+		margin: 0;
+		padding: 8px 8px 0;
+		border: 0;
+		border-radius: 0;
+		background: #f4f2ee;
+		color: #25282f;
+		box-shadow:
+			0 0 0 1px rgba(0, 0, 0, 0.09),
+			0 4px 10px -4px rgba(0, 0, 0, 0.32);
+		cursor: inherit;
+		font: inherit;
+		text-align: left;
+	}
+	.pw-card img {
+		display: block;
+		width: 100%;
+		height: auto;
+		aspect-ratio: var(--ratio);
+		object-fit: cover;
+		border-radius: 0;
+		background: #dcdad5;
+		-webkit-user-drag: none;
+		user-select: none;
+	}
+	.pw-cap {
+		display: block;
+		min-height: 30px;
+		padding: 8px 2px 8px;
+		font-size: 12.5px;
+		line-height: 14px;
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.pw-card:focus-visible {
+		outline: 3px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.pw-hint {
+		margin: 0.7rem 0 0;
+		text-align: center;
+		font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+		font-size: 0.72rem;
+		color: rgb(var(--gray));
+	}
+
+	/* viewer */
+	.pw-lb {
+		border: 0;
+		padding: 0;
+		background: transparent;
+		max-width: 100vw;
+		max-height: 100vh;
+		width: 100vw;
+		height: 100vh;
+		color: #fff;
+		overflow: hidden;
+	}
+	.pw-lb::backdrop {
+		background: rgba(8, 10, 14, 0.92);
+	}
+	.pw-lb[open] {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.pw-lb figure {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+		max-width: 92vw;
+	}
+	.pw-lb img {
+		max-width: min(92vw, 1400px);
+		max-height: 82vh;
+		width: auto;
+		height: auto;
+		border-radius: 0;
+		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+	}
+	.pw-lb figcaption {
+		font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+		font-size: 13px;
+		color: #c8cfdd;
+		min-height: 1.2em;
+	}
+	.pw-x,
+	.pw-nav {
+		position: absolute;
+		border: 0;
+		background: rgba(255, 255, 255, 0.1);
+		color: #fff;
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		font-size: 28px;
+		line-height: 1;
+		cursor: pointer;
+		display: grid;
+		place-items: center;
+		padding: 0 0 4px;
+	}
+	.pw-x:hover,
+	.pw-nav:hover {
+		background: rgba(255, 255, 255, 0.2);
+	}
+	.pw-x {
+		top: 16px;
+		right: 16px;
+	}
+	.pw-prev {
+		left: 16px;
+	}
+	.pw-next {
+		right: 16px;
+	}
+
+	@media (max-width: 900px) {
+		.pw-track {
+			column-count: 3;
+		}
+	}
+	@media (max-width: 700px) {
+		.pw-win {
+			height: 480px;
+		}
+		.pw-track {
+			column-count: 2;
+			column-gap: 10px;
+			padding: 28px 14px 50px;
+		}
+		.pw-cols {
+			gap: 10px;
+			padding: 0 14px;
+		}
+		.pw-nav {
+			display: none;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.pw-item {
+			transition: none;
+		}
+	}
+</style>
+
+<script>
+	function init(root: HTMLElement) {
+		const win = root.querySelector<HTMLElement>('.pw-win')!;
+		const track = root.querySelector<HTMLElement>('.pw-track')!;
+		const hint = root.querySelector<HTMLElement>('.pw-hint')!;
+		const badge = root.querySelector<HTMLElement>('.pw-state')!;
+		const dlg = root.querySelector<HTMLDialogElement>('.pw-lb')!;
+		const bigImg = dlg.querySelector('img')!;
+		const cap = dlg.querySelector('figcaption')!;
+		const speed = Number(root.dataset.speed) || 0;
+		const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		const originals = Array.from(track.children) as HTMLElement[];
+		const cards = originals.map((li) => li.querySelector<HTMLButtonElement>('.pw-card')!);
+
+		/* ---------- endless columns ----------
+		   Each column holds its photos plus copies of them. A column slides up by its own
+		   offset, and when the offset passes the height of one set it wraps back to 0,
+		   which looks identical, so the wall never ends. */
+		type Col = { inner: HTMLElement; period: number; phase: number };
+		let cols: Col[] = [];
+		let curN = 0;
+		const wrap = document.createElement('div');
+		wrap.className = 'pw-cols';
+
+		const nCols = () => (innerWidth <= 700 ? 2 : innerWidth <= 900 ? 2 :3);
+
+		function build() {
+			curN = nCols();
+			wrap.replaceChildren();
+			wrap.style.setProperty('--n', String(curN));
+			cols = [];
+			for (let c = 0; c < curN; c++) {
+				const el = document.createElement('div');
+				el.className = 'pw-col';
+				const inner = document.createElement('div');
+				inner.className = 'pw-col-in';
+				el.append(inner);
+				wrap.append(el);
+				cols.push({ inner, period: 1, phase: c * 83 });
+			}
+			originals.forEach((li, i) => cols[i % curN].inner.append(li));
+			if (!wrap.isConnected) {
+				track.replaceWith(wrap);
+				win.classList.add('is-live');
+			}
+			for (const c of cols) {
+				const set = Array.from(c.inner.children) as HTMLElement[];
+				if (!set.length) continue;
+				const copy = () =>
+					set.map((li) => {
+						const k = li.cloneNode(true) as HTMLElement;
+						k.setAttribute('aria-hidden', 'true');
+						k.querySelectorAll('button').forEach((b) => (b.tabIndex = -1));
+						c.inner.append(k);
+						return k;
+					});
+				const first = copy()[0];
+				c.period = Math.max(1, first.offsetTop - set[0].offsetTop);
+				let total = 2 * c.period;
+				while (total < c.period + win.clientHeight + 60) {
+					copy();
+					total += c.period;
+				}
+			}
+			apply();
+		}
+
+		/* ---------- motion ---------- */
+		let P = 0; // how far the wall has moved (can grow forever, columns wrap it)
+		let vel = 0; // flick velocity after a drag, px per frame
+		let stopped = false;
+		let dragging = false;
+		let visible = true;
+		const mod = (x: number, p: number) => ((x % p) + p) % p;
+		function apply() {
+			for (const c of cols) c.inner.style.transform = `translate3d(0, ${-mod(P + c.phase, c.period)}px, 0)`;
+		}
+		const tick = () => {
+			if (visible && !dragging) {
+				if (Math.abs(vel) > 0.05) {
+					P += vel;
+					vel *= 0.94;
+				} else if (speed && !reduce && !stopped && !dlg.open) {
+					P += speed;
+				}
+				apply();
+			}
+			requestAnimationFrame(tick);
+		};
+
+		build();
+		requestAnimationFrame(tick);
+		new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(root);
+		let rt: number | undefined;
+		addEventListener('resize', () => {
+			clearTimeout(rt);
+			rt = window.setTimeout(() => nCols() !== curN && build(), 150);
+		});
+
+		/* click the wall = pause / play */
+		const setStopped = (v: boolean) => {
+			stopped = v;
+			badge.hidden = !v;
+			hint.textContent = v ? 'Paused. Click the wall to play again' : 'Drag, click a photo, or click the wall to pause';
+		};
+
+		/* ---------- mouse drag (touch keeps scrolling the page) ---------- */
+		let startY = 0;
+		let startP = 0;
+		let moved = 0;
+		let lastY = 0;
+		let lastT = 0;
+		win.addEventListener('pointerdown', (e) => {
+			if (e.pointerType !== 'mouse' || e.button !== 0) return;
+			dragging = true;
+			moved = 0;
+			vel = 0;
+			startY = lastY = e.clientY;
+			startP = P;
+			lastT = performance.now();
+		});
+		win.addEventListener('pointermove', (e) => {
+			if (!dragging) return;
+			const dy = e.clientY - startY;
+			moved = Math.max(moved, Math.abs(dy));
+			if (moved > 5 && !win.classList.contains('is-dragging')) {
+				win.classList.add('is-dragging');
+				// only grab the pointer once it is really a drag, so plain clicks still reach the photo
+				win.setPointerCapture(e.pointerId);
+			}
+			P = startP - dy;
+			apply();
+			const now = performance.now();
+			const dt = Math.max(1, now - lastT);
+			vel = (-(e.clientY - lastY) / dt) * 16;
+			lastY = e.clientY;
+			lastT = now;
+		});
+		const endDrag = () => {
+			if (!dragging) return;
+			dragging = false;
+			win.classList.remove('is-dragging');
+			setTimeout(() => (moved = 0), 0); // the click that follows a drag is ignored
+			if (performance.now() - lastT > 90) vel = 0; // held still before letting go
+		};
+		win.addEventListener('pointerup', endDrag);
+		win.addEventListener('pointercancel', endDrag);
+
+		// sideways trackpad swipe / shift+wheel moves the wall; normal wheel still scrolls the page
+		win.addEventListener(
+			'wheel',
+			(e) => {
+				if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+					e.preventDefault();
+					P += e.deltaX;
+					apply();
+				}
+			},
+			{ passive: false }
+		);
+		win.addEventListener('keydown', (e) => {
+			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+				e.preventDefault();
+				P += e.key === 'ArrowDown' ? 90 : -90;
+				apply();
+			}
+		});
+
+		/* ---------- viewer ---------- */
+		let current = 0;
+		const show = (i: number) => {
+			current = (i + cards.length) % cards.length;
+			const c = cards[current];
+			bigImg.src = c.dataset.full || '';
+			bigImg.alt = c.dataset.caption || `Photo ${current + 1}`;
+			cap.textContent = c.dataset.caption || '';
+		};
+		win.addEventListener('click', (e) => {
+			if (moved > 5) return;
+			const card = (e.target as HTMLElement).closest<HTMLButtonElement>('.pw-card');
+			if (card) {
+				show(Number(card.dataset.i));
+				dlg.showModal();
+			} else {
+				setStopped(!stopped);
+			}
+		});
+		dlg.querySelector('.pw-prev')!.addEventListener('click', () => show(current - 1));
+		dlg.querySelector('.pw-next')!.addEventListener('click', () => show(current + 1));
+		dlg.addEventListener('keydown', (e) => {
+			if (e.key === 'ArrowLeft') show(current - 1);
+			if (e.key === 'ArrowRight') show(current + 1);
+		});
+		// click on the dark backdrop closes it
+		dlg.addEventListener('click', (e) => {
+			if (e.target === dlg) dlg.close();
+		});
+		// swipe in the viewer on phones
+		let sx = 0;
+		dlg.addEventListener('touchstart', (e) => (sx = e.touches[0].clientX), { passive: true });
+		dlg.addEventListener('touchend', (e) => {
+			const dx = e.changedTouches[0].clientX - sx;
+			if (Math.abs(dx) > 50) show(current + (dx < 0 ? 1 : -1));
+		});
+	}
+	document.querySelectorAll<HTMLElement>('.pw').forEach(init);
+</script>

@@ -1,0 +1,136 @@
+/* Shared page column for the home page: same column + faint vertical lines as the blog posts.
+   Use on any page as:  <main class="page"><div class="col"> ... </div></main>  */
+
+main.page {
+	--hl: rgba(var(--gray), 0.09);
+	--pad: 8px;
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+	padding: 0 0 40px;
+}
+:root[data-theme='dark'] main.page {
+	--hl: rgba(var(--gray), 0.17);
+}
+
+/* column + faint vertical lines (inner pair, outer gutter pair) */
+.page .col {
+	position: relative;
+	width: 100%;
+	max-width: 940px;
+	margin: 0 auto;
+}
+.page .col::before,
+.page .col::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	border-left: 1px solid var(--hl);
+	border-right: 1px solid var(--hl);
+	pointer-events: none;
+}
+.page .col::before {
+	left: 0;
+	right: 0;
+}
+.page .col::after {
+	left: -30px;
+	right: -30px;
+}
+
+/* top band with the page title, hairline underneath across the whole screen */
+.page .band {
+	position: relative;
+	padding: 28px var(--pad) 20px;
+}
+.page .band::after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	width: 100vw;
+	margin-left: -50vw;
+	height: 1px;
+	background: var(--hl);
+}
+.page .band h1 {
+	margin: 0;
+	font-size: clamp(28px, 20px + 1.6vw, 38px);
+	line-height: 1.15;
+	letter-spacing: -0.02em;
+	color: rgb(var(--black));
+}
+
+/* running text */
+.page .text {
+	padding: 18px var(--pad) 8px;
+	color: rgb(var(--gray-dark));
+}
+.page .text p {
+	margin: 0 0 20px;
+	font-size: 15px;
+	line-height: 28px;
+}
+
+/* section heading: hairline above and below, full screen width (same as blog h2) */
+.page .sec-head {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin: 36px 0 0;
+	padding: 8px var(--pad);
+}
+.page .sec-head h2 {
+	margin: 0;
+	font-size: clamp(24px, 18px + 1vw, 34px);
+	font-weight: 500;
+	line-height: 1.1;
+	letter-spacing: -0.02em;
+	color: rgb(var(--black));
+}
+.page .sec-head::before,
+.page .sec-head::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	width: 100vw;
+	margin-left: -50vw;
+	height: 1px;
+	background: var(--hl);
+}
+.page .sec-head::before {
+	top: 0;
+}
+.page .sec-head::after {
+	bottom: 0;
+}
+
+@media (max-width: 920px) {
+	.page .col::after {
+		display: none;
+	}
+}
+@media (max-width: 720px) {
+	main.page {
+		--pad: 20px;
+	}
+	.page .col::before {
+		display: none;
+	}
+	.page .band {
+		padding-top: 20px;
+	}
+	.page .text p {
+		line-height: 26px;
+		margin-bottom: 18px;
+	}
+	.page .sec-head {
+		margin-top: 28px;
+	}
+	.page .sec-head h2 {
+		font-size: 24px;
+	}
+}
