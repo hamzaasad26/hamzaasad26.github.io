@@ -1,4 +1,5 @@
 ---
+import '@fontsource/jetbrains-mono/400.css';
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
@@ -11,70 +12,277 @@ type Props = CollectionEntry<'blog'>['data'];
 const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 ---
 
+<!doctype html>
 <html lang="en">
 	<head>
 		<BaseHead title={title} description={description} />
-		<style>
-			main {
-				width: calc(100% - 2em);
+		<style is:global>
+			/* ---------- page ---------- */
+			main.post {
+				--hl: rgba(var(--gray), 0.09);
+				--pad: 8px;
+				width: 100%;
 				max-width: 100%;
 				margin: 0;
+				padding: 0 0 40px;
 			}
-			.hero-image {
+			:root[data-theme='dark'] main.post {
+				--hl: rgba(var(--gray), 0.17);
+			}
+
+			/* ---------- column + faint vertical lines (inner pair, outer gutter pair) ---------- */
+			.post .col {
+				position: relative;
 				width: 100%;
-			}
-			.hero-image img {
-				display: block;
+				max-width: 940px;
 				margin: 0 auto;
-				border-radius: 12px;
-				box-shadow: var(--box-shadow);
 			}
-			.prose {
-				width: 720px;
-				max-width: calc(100% - 2em);
-				margin: auto;
-				padding: 1em;
-				color: rgb(var(--gray-dark));
+			.post .col::before,
+			.post .col::after {
+				content: '';
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				border-left: 1px solid var(--hl);
+				border-right: 1px solid var(--hl);
+				pointer-events: none;
 			}
-			.title {
-				margin-bottom: 1em;
-				padding: 1em 0;
-				text-align: center;
-				line-height: 1;
+			.post .col::before {
+				left: 0;
+				right: 0;
 			}
-			.title h1 {
-				margin: 0 0 0.5em 0;
+			.post .col::after {
+				left: -30px;
+				right: -30px;
 			}
-			.date {
-				margin-bottom: 0.5em;
+
+			/* ---------- hero + title ---------- */
+			.post .hero-image {
+				padding: 20px var(--pad) 0;
+			}
+			.post .hero-image img {
+				display: block;
+				width: 100%;
+				height: auto;
+				border-radius: 8px;
+			}
+			.post .title {
+				position: relative;
+				padding: 28px var(--pad) 20px;
+				text-align: left;
+			}
+			.post .title::after {
+				content: '';
+				position: absolute;
+				bottom: 0;
+				left: 50%;
+				width: 100vw;
+				margin-left: -50vw;
+				height: 1px;
+				background: var(--hl);
+			}
+			.post .date {
+				margin: 0 0 8px;
+				font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+				font-size: 11.5px;
+				line-height: 1.5;
 				color: rgb(var(--gray));
 			}
-			.last-updated-on {
-				font-style: italic;
+			.post .last-updated-on {
+				margin-top: 2px;
+				font-style: normal;
+			}
+			.post .title h1 {
+				margin: 0;
+				font-size: clamp(28px, 20px + 1.6vw, 38px);
+				line-height: 1.15;
+				letter-spacing: -0.02em;
+				color: rgb(var(--black));
+			}
+
+			/* ---------- body text (!important on size/line-height so theme.css can't override) ---------- */
+			.post .prose {
+				padding: 18px var(--pad) 40px;
+				color: rgb(var(--gray-dark));
+				font-size: 15px !important;
+				line-height: 28px !important;
+			}
+			.post .prose p,
+			.post .prose li,
+			.post .prose td,
+			.post .prose th,
+			.post .prose blockquote {
+				font-size: 15px !important;
+				line-height: 28px !important;
+			}
+			.post .prose p {
+				margin: 0 0 20px;
+			}
+			.post .prose ul,
+			.post .prose ol {
+				margin: 0 0 20px;
+				padding-left: 24px;
+			}
+			.post .prose li {
+				margin-bottom: 6px;
+			}
+			.post .prose li > ul,
+			.post .prose li > ol {
+				margin: 6px 0 0;
+			}
+			.post .prose ol li::marker {
+				color: rgb(var(--gray));
+			}
+
+			/* ---------- section headings: hairline above and below ---------- */
+			.post .prose h2 {
+				position: relative;
+				margin: 36px 0 14px;
+				padding: 8px 0;
+				font-size: clamp(24px, 18px + 1vw, 34px) !important;
+				font-weight: 500;
+				line-height: 1.1 !important;
+				letter-spacing: -0.02em;
+				color: rgb(var(--black));
+			}
+			.post .prose h2::before,
+			.post .prose h2::after {
+				content: '';
+				position: absolute;
+				left: 50%;
+				width: 100vw;
+				margin-left: -50vw;
+				height: 1px;
+				background: var(--hl);
+			}
+			.post .prose h2::before {
+				top: 0;
+			}
+			.post .prose h2::after {
+				bottom: 0;
+			}
+			.post .prose > h2:first-child {
+				margin-top: 0;
+			}
+			.post .prose > h2:first-child::before {
+				display: none;
+			}
+
+			/* sub-headings: just space, no lines */
+			.post .prose h3 {
+				margin: 26px 0 8px;
+				font-size: 19px !important;
+				font-weight: 500;
+				line-height: 1.3 !important;
+				letter-spacing: -0.01em;
+				color: rgb(var(--black));
+			}
+			.post .prose h4 {
+				margin: 20px 0 6px;
+				font-size: 16px !important;
+				line-height: 1.4 !important;
+				color: rgb(var(--black));
+			}
+
+			/* ---------- code, quotes, images, tables ---------- */
+			.post .prose :not(pre) > code {
+				padding: 2px 5px;
+				border-radius: 4px;
+				background: rgba(var(--gray), 0.12);
+				font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+				font-size: 0.88em !important;
+			}
+			.post .prose pre {
+				margin: 0 0 20px;
+				padding: 12px 14px;
+				border-radius: 8px;
+				font-size: 12.5px !important;
+				line-height: 1.5 !important;
+				overflow-x: auto;
+			}
+			.post .prose pre code {
+				padding: 0;
+				background: none;
+				font-size: inherit !important;
+			}
+			.post .prose blockquote {
+				margin: 0 0 20px;
+				padding-left: 16px;
+				border-left: 2px solid rgba(var(--gray), 0.35);
+				color: rgb(var(--gray));
+			}
+			.post .prose img {
+				max-width: 100%;
+				height: auto;
+				border-radius: 8px;
+			}
+			.post .prose hr {
+				margin: 24px 0;
+				border: 0;
+				border-top: 1px solid var(--hl);
+			}
+			.post .prose table {
+				display: block;
+				max-width: 100%;
+				overflow-x: auto;
+			}
+
+			/* ---------- narrower screens ---------- */
+			@media (max-width: 920px) {
+				.post .col::after {
+					display: none;
+				}
+			}
+			@media (max-width: 720px) {
+				main.post {
+					--pad: 20px;
+				}
+				.post .col::before {
+					display: none;
+				}
+				.post .title {
+					padding-top: 20px;
+				}
+				.post .prose {
+					padding-top: 16px;
+				}
+				.post .prose p,
+				.post .prose li,
+				.post .prose blockquote {
+					line-height: 26px !important;
+				}
+				.post .prose p {
+					margin-bottom: 18px;
+				}
+				.post .prose h2 {
+					margin: 28px 0 12px;
+					font-size: 24px !important;
+				}
 			}
 		</style>
 	</head>
 
 	<body>
 		<Header />
-		<main>
-			<article>
-				<div class="hero-image">
-					{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
+		<main class="post">
+			<article class="col">
+				{heroImage && (
+					<div class="hero-image">
+						<Image width={1020} height={510} src={heroImage} alt="" />
+					</div>
+				)}
+				<div class="title">
+					<div class="date">
+						<FormattedDate date={pubDate} />
+						{updatedDate && (
+							<div class="last-updated-on">
+								Last updated on <FormattedDate date={updatedDate} />
+							</div>
+						)}
+					</div>
+					<h1>{title}</h1>
 				</div>
 				<div class="prose">
-					<div class="title">
-						<div class="date">
-							<FormattedDate date={pubDate} />
-							{updatedDate && (
-								<div class="last-updated-on">
-									Last updated on <FormattedDate date={updatedDate} />
-								</div>
-							)}
-						</div>
-						<h1>{title}</h1>
-						<hr />
-					</div>
 					<slot />
 				</div>
 			</article>

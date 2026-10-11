@@ -240,3 +240,32 @@ main:has(article) .prose p {
     margin-right: 0 !important;
   }
 }
+
+/* ---- Site font: Inter ---- */
+html body {
+  font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* ---- Smaller base text ---- */
+html body {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ---- Light mode: cream instead of white ---- */
+:root:not([data-theme='dark']) {
+  --cream: #f7f2e7;
+  --header-bg: #f7f2e7;
+}
+html:not([data-theme='dark']),
+html:not([data-theme='dark']) body {
+  background: var(--cream) !important;
+}
