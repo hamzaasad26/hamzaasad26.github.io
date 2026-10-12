@@ -1,0 +1,167 @@
+---
+// EDIT HERE: one object per role, newest first.
+// `bullets` = the description shown on hover/tap. `note` = optional highlight (red text) next to the role.
+const roles = [
+	{
+		company: 'AdLabs Solutions',
+		role: 'Associate Data Engineer',
+		place: 'Islamabad',
+		dates: "Sep '26 — Present",
+		note: '',
+		bullets: [
+			'Audit and maintain ETL pipelines to ensure reliable, accurate data processing across production workflows.',
+			'Process and transform data feeding into enterprise data warehouses to support downstream analytics and reporting.',
+		],
+	},
+	{
+		company: 'Knowledge Data & Discovery Lab',
+		role: 'Research Assistant',
+		place: 'Islamabad',
+		dates: "Aug '25 — May '26",
+		note: '',
+		bullets: [
+			'Worked on an intelligent flare-up monitoring, prediction, and alert system for arthritis and related joint conditions as part of a final-year project.',
+			'Developed components for monitoring patient symptoms and predicting potential flare-ups using multimodal health data.',
+		],
+	},
+	{
+		company: 'FRSG',
+		role: 'Research Assistant',
+		place: 'Islamabad',
+		dates: "Aug '25 — Feb '26",
+		note: '',
+		bullets: [
+			'Built real-time video processing pipelines for surveillance analytics, enabling scalable event detection and automated feature extraction workflows.',
+			'Researched self-supervised learning techniques for altercation prediction from video data.',
+		],
+	},
+	{
+		company: 'NASTP',
+		role: 'ML Engineer Intern',
+		place: 'National Aerospace Science & Technology Park — Islamabad, Pakistan',
+		dates: "Jul '25 — Aug '25",
+		note: '',
+		bullets: [
+			'Developed spatio-temporal hail prediction models using CV techniques on satellite imagery and real-time video sequences.',
+			'Evaluated computer vision and temporal modeling approaches for predicting weather-related events from sequential data.',
+		],
+	},
+	{
+		company: 'FAST NUCES',
+		role: 'Teaching Assistant & Lab Demonstrator',
+		place: 'Islamabad',
+		dates: "Jan '24 — Jan '25",
+		note: '',
+		bullets: [
+			'Supported 200+ students in Introduction to Data Science and OOP; delivered labs and academic guidance.',
+			'Conducted campus-wide Python workshop (PyNexus; 150+ participants).',
+		],
+	},
+	{
+		company: 'AIM LAB',
+		role: 'AI/ML Engineer',
+		place: 'Artificial Intelligence and Machine Learning Lab',
+		dates: "Jun '24 — Aug '24",
+		note: '',
+		bullets: [
+			'Developed real-time data preprocessing and multimodal analysis pipelines for audio and text datasets, integrating automated CV parsing and feature extraction workflows using LlamaParse.',
+		],
+	},
+];
+const SHOW = 4; // rows visible before "Show N more earlier roles"
+const hidden = Math.max(0, roles.length - SHOW);
+---
+
+<section class="xp" aria-label="Experience">
+	<div class="sec-head"><h2>Experience</h2></div>
+
+	<ul class="xp-list">
+		{
+			roles.map((r, i) => (
+				<li class={`xp-item${i >= SHOW ? ' xp-more' : ''}`} hidden={i >= SHOW}>
+					<button type="button" class="xp-row" aria-expanded="false">
+						<span class="xp-main">
+							<b class="xp-co">{r.company}</b>
+							<span class="xp-role">{r.role}</span>
+							{r.note && <span class="xp-note">{r.note}</span>}
+						</span>
+						<span class="xp-dots" aria-hidden="true" />
+						<span class="xp-date">{r.dates}</span>
+					</button>
+					<div class="xp-body">
+						<div class="xp-inner">
+							{r.place && <p class="xp-place">{r.place}</p>}
+							<ul>{r.bullets.map((b) => <li>{b}</li>)}</ul>
+						</div>
+					</div>
+				</li>
+			))
+		}
+	</ul>
+
+	<div class="xp-ctl">
+		{hidden > 0 && <button type="button" id="xp-more">Show {hidden} more earlier roles</button>}
+		<button type="button" id="xp-all">Expand all</button>
+	</div>
+</section>
+
+<style>
+	.xp-list { list-style: none; margin: 0; padding: 0; }
+	.xp-item { border-bottom: 1px solid var(--hl); }
+	.xp-item[hidden] { display: none; }
+	.xp-row {
+		all: unset; box-sizing: border-box; cursor: pointer; width: 100%;
+		display: flex; align-items: baseline; gap: 10px;
+		padding: 14px var(--pad); font-family: 'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: -0.031em; color: #27272a;
+	}
+	.xp-row:focus-visible { outline: 2px solid rgb(var(--black)); outline-offset: -2px; }
+	.xp-main { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; min-width: 0; }
+	.xp-co { color: #27272a; font-weight: 500; }
+	.xp-role { color: rgb(var(--gray)); }
+	.xp-note { color: #e5484d; font-size: 12px; }
+	.xp-dots { flex: 1; min-width: 16px; border-bottom: 1px dotted rgb(var(--gray) / .55); transform: translateY(-4px); }
+	.xp-date { color: rgb(var(--gray)); font-variant-numeric: tabular-nums; white-space: nowrap; }
+	.xp-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .28s ease; }
+	.xp-inner { overflow: hidden; min-height: 0; padding: 0 var(--pad); }
+	.xp-item.is-open .xp-body { grid-template-rows: 1fr; }
+	@media (hover: hover) { .xp-item:hover .xp-body { grid-template-rows: 1fr; } }
+	.xp-place { margin: 0 0 6px; font-size: 12px; color: rgb(var(--gray)); }
+	.xp-inner ul { list-style: disc; margin: 0 0 14px; padding-left: 18px; font-family: 'Inter', 'Inter Variable', -apple-system, system-ui, sans-serif; font-size: 14px; line-height: 1.55; font-weight: 500; letter-spacing: -0.031em; color: #27272a; }
+	.xp-inner li { margin: 0 0 6px; }
+	:global(:root[data-theme='dark']) .xp-row,
+	:global(:root[data-theme='dark']) .xp-co,
+	:global(:root[data-theme='dark']) .xp-inner ul { color: rgb(var(--gray-light)); }
+	.xp-ctl { display: flex; gap: 18px; padding: 12px var(--pad) 0; }
+	.xp-ctl button { all: unset; cursor: pointer; font-size: 13px; color: rgb(var(--gray)); text-decoration: underline; text-underline-offset: 3px; }
+	.xp-ctl button:hover { color: rgb(var(--black)); }
+	@media (max-width: 720px) {
+		.xp-dots { display: none; }
+		.xp-row { justify-content: space-between; }
+	}
+	@media (prefers-reduced-motion: reduce) { .xp-body { transition: none; } }
+</style>
+
+<script>
+	const root = document.querySelector('.xp');
+	if (root) {
+		const items = [...root.querySelectorAll<HTMLElement>('.xp-item')];
+		const set = (it: HTMLElement, on: boolean) => {
+			it.classList.toggle('is-open', on);
+			it.querySelector('.xp-row')?.setAttribute('aria-expanded', String(on));
+		};
+		items.forEach((it) => it.querySelector('.xp-row')?.addEventListener('click', () => set(it, !it.classList.contains('is-open'))));
+		root.querySelector('#xp-more')?.addEventListener('click', (e) => {
+			root.querySelectorAll<HTMLElement>('.xp-more').forEach((x) => (x.hidden = false));
+			(e.currentTarget as HTMLElement).remove();
+		});
+		let all = false;
+		const btn = root.querySelector<HTMLElement>('#xp-all');
+		btn?.addEventListener('click', () => {
+			all = !all;
+			root.querySelectorAll<HTMLElement>('.xp-more').forEach((x) => (x.hidden = false));
+			root.querySelector('#xp-more')?.remove();
+			items.forEach((it) => set(it, all));
+			btn.textContent = all ? 'Collapse all' : 'Expand all';
+		});
+	}
+</script>
