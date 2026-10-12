@@ -168,4 +168,6 @@ body, button, input, textarea { font-family: Inter, -apple-system, BlinkMacSyste
 	}
 }
 .page .sec-head h2 .mute { color: rgb(var(--gray)); }
+.page .text a { color: #c2410c; }
+:root[data-theme='dark'] .page .text a { color: #f59e6b; }
 /* tweak:end */
