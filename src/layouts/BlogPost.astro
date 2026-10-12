@@ -23,7 +23,7 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 			/* ---------- page ---------- */
 			main.post {
 				--hl: rgba(var(--gray), 0.09);
-				--pad: 8px;
+				--pad: 30px;
 				width: 100%;
 				max-width: 100%;
 				margin: 0;
@@ -148,6 +148,7 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 				letter-spacing: -0.02em;
 				color: rgb(var(--black));
 			}
+			.post .prose h2 { padding: 3px 0; }
 			.post .prose h2::before,
 			.post .prose h2::after {
 				content: '';

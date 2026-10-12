@@ -3,7 +3,7 @@
 
 main.page {
 	--hl: rgba(var(--gray), 0.09);
-	--pad: 6px;
+	--pad: 30px;
 	width: 100%;
 	max-width: 100%;
 	margin: 0;
@@ -162,6 +162,9 @@ body, button, input, textarea { font-family: Inter, -apple-system, BlinkMacSyste
 	.page .text { padding-bottom: 0; }
 	.page .text p:last-child { margin-bottom: 0; }
 	.page .sec-head { margin-top: 48px; }
+	.page .sec-head { padding-top: 3px; padding-bottom: 3px; }
+	.page .sec-head h2 { line-height: 30px; }
+	.page .band { padding-top: 12px; padding-bottom: 10px; }
 	.page .sec-head h2 {
 		font-size: 30px; line-height: 36px;
 		font-weight: 500; letter-spacing: -0.035em;
