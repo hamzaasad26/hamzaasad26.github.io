@@ -114,12 +114,17 @@ main.page {
 	}
 }
 @media (max-width: 720px) {
-	main.page {
+	/* main.page {
 		--pad: 20px;
 	}
 	.page .col::before {
 		display: none;
-	}
+	} */
+		main.page {
+		--pad: 16px;
+		box-sizing: border-box;
+		padding: 0 12px 40px;
+	} 
 	.page .band {
 		padding-top: 20px;
 	}
