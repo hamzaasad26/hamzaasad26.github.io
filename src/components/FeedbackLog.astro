@@ -92,7 +92,7 @@ const { inCol = false } = Astro.props;
 		<li class="row">
 			<span class="epoch"></span>
 			<span class="sep" aria-hidden="true">|</span>
-			<span class="msg"><span class="muted who"></span> <span class="text"></span></span>
+			<span class="msg"><span class="muted who"></span> <span class="quote"></span></span>
 		</li>
 	</template>
 </section>
@@ -285,7 +285,7 @@ const { inCol = false } = Astro.props;
 				const name = typeof data.name === 'string' ? data.name.trim() : '';
 				// textContent only, so visitors can never inject HTML.
 				li.querySelector('.who')!.textContent = name ? `reader (${name}):` : 'reader:';
-				li.querySelector('.text')!.textContent = `“${String(data.message ?? '')}”`;
+				li.querySelector('.quote')!.textContent = `“${String(data.message ?? '')}”`;
 				if (initialised && !seen.has(d.id)) {
 					li.classList.add('new');
 					hasNew = true;
