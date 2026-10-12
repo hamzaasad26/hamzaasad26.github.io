@@ -108,7 +108,11 @@ main.page {
 	bottom: 0;
 }
 
-@media (max-width: 920px) {
+@media (max-width: 1000px) {
+	main.page {
+		box-sizing: border-box;
+		padding: 0 14px 40px;
+	}
 	.page .col::after {
 		display: none;
 	}
