@@ -167,4 +167,5 @@ body, button, input, textarea { font-family: Inter, -apple-system, BlinkMacSyste
 		font-weight: 500; letter-spacing: -0.035em;
 	}
 }
+.page .sec-head h2 .mute { color: rgb(var(--gray)); }
 /* tweak:end */

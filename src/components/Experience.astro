@@ -112,11 +112,11 @@ const hidden = Math.max(0, roles.length - SHOW);
 	.xp-row {
 		all: unset; box-sizing: border-box; cursor: pointer; width: 100%;
 		display: flex; align-items: baseline; gap: 10px;
-		padding: 14px var(--pad); font-family: 'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: -0.031em; color: #27272a;
+		padding: 14px var(--pad); font-family: 'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: -0.031em; color: var(--ink);
 	}
 	.xp-row:focus-visible { outline: 2px solid rgb(var(--black)); outline-offset: -2px; }
 	.xp-main { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; min-width: 0; }
-	.xp-co { color: #27272a; font-weight: 500; }
+	.xp-co { color: var(--ink); font-weight: 500; }
 	.xp-role { color: rgb(var(--gray)); }
 	.xp-note { color: #e5484d; font-size: 12px; }
 	.xp-dots { flex: 1; min-width: 16px; border-bottom: 1px dotted rgb(var(--gray) / .55); transform: translateY(-4px); }
@@ -126,11 +126,10 @@ const hidden = Math.max(0, roles.length - SHOW);
 	.xp-item.is-open .xp-body { grid-template-rows: 1fr; }
 	@media (hover: hover) { .xp-item:hover .xp-body { grid-template-rows: 1fr; } }
 	.xp-place { margin: 0 0 6px; font-size: 12px; color: rgb(var(--gray)); }
-	.xp-inner ul { list-style: disc; margin: 0 0 14px; padding-left: 18px; font-family: 'Inter', 'Inter Variable', -apple-system, system-ui, sans-serif; font-size: 14px; line-height: 1.55; font-weight: 500; letter-spacing: -0.031em; color: #27272a; }
+	.xp-inner ul { list-style: disc; margin: 0 0 14px; padding-left: 18px; font-family: 'Inter', 'Inter Variable', -apple-system, system-ui, sans-serif; font-size: 14px; line-height: 1.55; font-weight: 500; letter-spacing: -0.031em; color: var(--ink); }
 	.xp-inner li { margin: 0 0 6px; }
-	:global(:root[data-theme='dark']) .xp-row,
-	:global(:root[data-theme='dark']) .xp-co,
-	:global(:root[data-theme='dark']) .xp-inner ul { color: rgb(var(--gray-light)); }
+	.xp { --ink: #27272a; }
+	:global(:root[data-theme='dark']) .xp { --ink: rgb(var(--gray-dark)); }
 	.xp-ctl { display: flex; gap: 18px; padding: 12px var(--pad) 0; }
 	.xp-ctl button { all: unset; cursor: pointer; font-size: 13px; color: rgb(var(--gray)); text-decoration: underline; text-underline-offset: 3px; }
 	.xp-ctl button:hover { color: rgb(var(--black)); }

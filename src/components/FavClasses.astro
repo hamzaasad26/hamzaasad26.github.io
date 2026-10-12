@@ -1,0 +1,127 @@
+---
+// EDIT HERE: course name + grade. Order is split into two rows automatically (alternating).
+const courses = [
+	['Communication and Presentation Skills - Lab', 'A+'],
+	['Database Systems', 'A+'],
+	['Data Analysis and Visualization - Lab', 'A+'],
+	['Digital Marketing', 'A+'],
+	['Deep Learning for Perception', 'A+'],
+	['Final Year Project - I', 'A+'],
+	['Final Year Project - II', 'A+'],
+	['Introduction to Information and Communication Technology', 'A'],
+	['Differential Equations', 'A'],
+	['Communication and Presentation Skills', 'A'],
+	['Data Structures', 'A'],
+	['Advanced Statistics', 'A'],
+	['Object Oriented Programming - Lab', 'A'],
+	['Digital Logic Design Lab', 'A'],
+	['Operating Systems', 'A'],
+	['Data Structures - Lab', 'A'],
+	['Computer Organization and Assembly Language', 'A'],
+	['Artificial Intelligence - Lab', 'A'],
+	['Digital Image Processing', 'A'],
+	['Computer Networks', 'A'],
+	['Professional Practices in IT', 'A'],
+	['Data Warehousing and Business Intelligence', 'A'],
+];
+const edu = {
+	years: '2022 — 2026', // EDIT: real dates
+	school: 'FAST NUCES, Islamabad',
+	degree: 'B.S. Data Science',
+	cgpa: '3.52/4.0',
+	honour: "Dean's List",
+};
+const rowA = courses.filter((_, i) => i % 2 === 0);
+const rowB = courses.filter((_, i) => i % 2 === 1);
+const rows = [
+	{ items: rowA, cls: 'left', dur: rowA.length * 5 },
+	{ items: rowB, cls: 'right', dur: rowB.length * 5 },
+];
+---
+
+<section class="fc" aria-label="Education and favourite classes">
+	<div class="sec-head"><h2>Education <span class="mute">&amp; Favourite classes</span></h2></div>
+	<div class="edu-wrap">
+		<div class="edu">
+			<i style="top:30px"></i><i style="top:130px"></i>
+			<span class="edu-stamp" aria-hidden="true"></span>
+			<span class="edu-m">{edu.years}</span>
+			<h4>{edu.school}</h4>
+			<p>{edu.degree}</p>
+			<div class="edu-l"><span class="edu-a">{edu.cgpa} CGPA</span> · {edu.honour}</div>
+		</div>
+	</div>
+	<div class="fc-rows">
+		{
+			rows.map((r) => (
+				<div class="fc-row">
+					<div class={`fc-track ${r.cls}`} style={`--dur:${r.dur}s`}>
+						{[0, 1].map((n) => (
+							<ul aria-hidden={n === 1 ? 'true' : undefined}>
+								{r.items.map(([name, grade]) => (
+									<li>
+										<span class="n">{name}</span> <span class="g">{grade}</span>
+									</li>
+								))}
+							</ul>
+						))}
+					</div>
+				</div>
+			))
+		}
+	</div>
+</section>
+
+<style>
+	.edu-wrap { padding: 28px var(--pad) 8px; }
+	.edu {
+		position: relative; max-width: 460px; min-height: 170px; transform: rotate(-0.6deg);
+		padding: 18px 20px 16px 44px; background-color: #fffdf7; color: #27272a; --ink: #27272a;
+		background-image: repeating-linear-gradient(transparent 0 25px, rgb(96 115 159 / .15) 25px 26px);
+		background-position: 0 44px;
+		box-shadow: 0 0 0 1px rgb(0 0 0 / .1), 0 6px 14px -8px rgb(0 0 0 / .4);
+		font-family: 'Inter', 'Inter Variable', -apple-system, system-ui, sans-serif; font-weight: 500; letter-spacing: -0.031em;
+	}
+	.edu::before { content: ''; position: absolute; left: 30px; top: 0; bottom: 0; width: 1px; background: rgb(194 65 12 / .35); }
+	.edu i { position: absolute; left: 9px; width: 11px; height: 11px; border-radius: 50%; background: var(--edu-hole, #f7f2e7); box-shadow: inset 0 1px 2px rgb(0 0 0 / .35); }
+	.edu h4 { margin: 10px 0 0; font-size: 16px; font-weight: 500; line-height: 26px; }
+	.edu p, .edu-l { margin: 0; font-size: 14px; line-height: 26px; }
+	.edu p { color: rgb(var(--gray)); }
+	.edu-m { font: 500 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .04em; color: #8a8f9c; text-transform: uppercase; }
+	.edu-a { color: #c2410c; }
+	.edu-stamp {
+	position: absolute; right: 16px; top: 14px; width: 118px; height: 109px;
+	background: #27272a; opacity: .17; transform: rotate(7deg); pointer-events: none;
+	-webkit-mask: url('/fast-stamp.png') center / contain no-repeat;
+	mask: url('/fast-stamp.png') center / contain no-repeat;
+}
+:global(:root[data-theme='dark']) .edu-stamp { background: rgb(var(--gray-dark)); opacity: .2; }
+@media (max-width: 720px) { .edu-stamp { width: 96px; height: 89px; right: 10px; } }
+	:global(:root[data-theme='dark']) .edu { background-color: #1e212a; color: rgb(var(--gray-dark)); --edu-hole: #0d1016; }
+	:global(:root[data-theme='dark']) .edu-a { color: #f59e6b; }
+	@media (max-width: 720px) { .edu { max-width: none; } }
+	.fc-rows { padding: 40px 0 26px; display: grid; gap: 18px; overflow: hidden; }
+	.fc-row {
+		overflow: hidden;
+		-webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+		mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+	}
+	:global(.page .sec-head h2 .mute) { color: rgb(var(--gray)); }
+	.fc-track { display: flex; width: max-content; animation: fc-scroll var(--dur, 90s) linear infinite; }
+	.fc-track.right { animation-direction: reverse; }
+	.fc-row:hover .fc-track { animation-play-state: paused; }
+	.fc-track ul { display: flex; flex: none; list-style: none; margin: 0; padding: 0; }
+	.fc-track li {
+		flex: none; padding-right: 40px; white-space: nowrap;
+		font-family: 'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+		font-size: 14px; font-weight: 500; letter-spacing: -0.031em; color: var(--ink);
+	}
+	.g { color: rgb(var(--gray)); margin-left: 4px; }
+	.fc { --ink: #27272a; }
+	:global(:root[data-theme='dark']) .fc { --ink: rgb(var(--gray-dark)); }
+	@keyframes fc-scroll { to { transform: translateX(-50%); } }
+	@media (prefers-reduced-motion: reduce) {
+		.fc-track { animation: none; }
+		.fc-row { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+	}
+</style>
