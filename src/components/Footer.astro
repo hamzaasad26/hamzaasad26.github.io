@@ -35,6 +35,14 @@ const isHome = Astro.url.pathname === '/';
 		</a>
 	</div>
 </footer>
+<script>
+	document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((a) => {
+		if (a.protocol.startsWith('http') && a.origin !== location.origin) {
+			a.target = '_blank';
+			a.rel = 'noopener noreferrer';
+		}
+	});
+</script>
 <style>
 	footer {
 		padding: 2em 1em 6em 1em;

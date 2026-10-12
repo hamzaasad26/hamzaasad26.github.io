@@ -139,3 +139,33 @@ hr {
 	/* added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space */
 	white-space: nowrap;
 }
+
+
+/* ---- links: internal = orange, external = text colour + dotted underline + slim arrow ---- */
+:where(main, .feedback) a { color: #c2410c; }
+:root[data-theme='dark'] :where(main, .feedback) a { color: #f59e6b; }
+
+:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost']),
+:where(main, .feedback) a[href^='//'] {
+	color: inherit;
+	text-decoration-line: underline;
+	text-decoration-style: dotted;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost']):hover,
+:where(main, .feedback) a[href^='//']:hover {
+	text-decoration-style: solid;
+}
+:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost'])::after,
+:where(main, .feedback) a[href^='//']::after {
+	content: '';
+	display: inline-block;
+	width: 0.62em;
+	height: 0.62em;
+	margin-left: 0.22em;
+	background: currentColor;
+	opacity: 0.5;
+	-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17L17 7M8 7h9v9'/%3E%3C/svg%3E") center / contain no-repeat;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17L17 7M8 7h9v9'/%3E%3C/svg%3E") center / contain no-repeat;
+}

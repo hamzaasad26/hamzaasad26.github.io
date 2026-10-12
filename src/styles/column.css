@@ -171,6 +171,23 @@ body, button, input, textarea { font-family: Inter, -apple-system, BlinkMacSyste
 	}
 }
 .page .sec-head h2 .mute { color: rgb(var(--gray)); }
-.page .text a { color: #c2410c; }
-:root[data-theme='dark'] .page .text a { color: #f59e6b; }
+/* .page .text a { color: #c2410c; }
+:root[data-theme='dark'] .page .text a { color: #f59e6b; } */
+.page .text img.inline-logo {
+	display: inline-block;
+	width: 1.1em;
+	height: 1.1em;
+	margin-right: 0.35em;
+	vertical-align: -0.2em;
+}
+
+.page .band h1 .flag {
+	height: 0.7em;
+	width: auto;
+	margin-left: 0.15em;
+	vertical-align: -0.02em;
+	border-radius: 2px;
+	box-shadow: 0 0 0 1px rgb(0 0 0 / 0.15);
+}
+:root[data-theme='dark'] .page .band h1 .flag { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2); }
 /* tweak:end */
