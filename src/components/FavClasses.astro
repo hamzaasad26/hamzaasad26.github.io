@@ -84,21 +84,21 @@ const rows = [
 	}
 	.edu::before { content: ''; position: absolute; left: 30px; top: 0; bottom: 0; width: 1px; background: rgb(194 65 12 / .35); }
 	.edu i { position: absolute; left: 9px; width: 11px; height: 11px; border-radius: 50%; background: var(--edu-hole, #f7f2e7); box-shadow: inset 0 1px 2px rgb(0 0 0 / .35); }
-	.edu h4 { margin: 10px 0 0; font-size: 16px; font-weight: 500; line-height: 26px; }
+	.edu h4 { margin: 10px 0 0; font-size: 16px; font-weight: 500; line-height: 26px ; color: #27272a;  }
 	.edu p, .edu-l { margin: 0; font-size: 14px; line-height: 26px; }
 	.edu p { color: rgb(var(--gray)); }
 	.edu-m { font: 500 11px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .04em; color: #8a8f9c; text-transform: uppercase; }
 	.edu-a { color: #c2410c; }
 	.edu-stamp {
-	position: absolute; right: 16px; top: 14px; width: 118px; height: 109px;
-	background: #27272a; opacity: .17; transform: rotate(7deg); pointer-events: none;
-	-webkit-mask: url('/fast-stamp.png') center / contain no-repeat;
-	mask: url('/fast-stamp.png') center / contain no-repeat;
-}
-:global(:root[data-theme='dark']) .edu-stamp { background: rgb(var(--gray-dark)); opacity: .2; }
-@media (max-width: 720px) { .edu-stamp { width: 96px; height: 89px; right: 10px; } }
-	:global(:root[data-theme='dark']) .edu { background-color: #1e212a; color: rgb(var(--gray-dark)); --edu-hole: #0d1016; }
-	:global(:root[data-theme='dark']) .edu-a { color: #f59e6b; }
+		position: absolute; right: 16px; top: 14px; width: 118px; height: 109px;
+		background: #27272a; opacity: .17; transform: rotate(7deg); pointer-events: none;
+		-webkit-mask: url('/fast-stamp.png') center / contain no-repeat;
+		mask: url('/fast-stamp.png') center / contain no-repeat;
+	}
+	/* dark mode: card keeps its light paper look; only the holes and the grey line are pinned */
+	:global(:root[data-theme='dark']) .edu { --edu-hole: #0d1016; }
+	:global(:root[data-theme='dark']) .edu p { color: #596380; }
+	@media (max-width: 720px) { .edu-stamp { width: 96px; height: 89px; right: 10px; } }
 	@media (max-width: 720px) { .edu { max-width: none; } }
 	.fc-rows { padding: 40px 0 26px; display: grid; gap: 18px; overflow: hidden; }
 	.fc-row {
