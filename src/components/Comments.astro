@@ -313,6 +313,13 @@ const slug = Astro.url.pathname.replace(/^\/+|\/+$/g, '');
 </script>
 
 <style is:global>
+.cm-list {
+	max-height: 380px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+	scrollbar-color: #3a404b transparent;
+}
 	.cm {
 		--accent: #3ddc84;
 		--panel: #0f1115;
