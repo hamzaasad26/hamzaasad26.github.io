@@ -145,7 +145,7 @@ hr {
 :where(main, .feedback) a { color: #c2410c; }
 :root[data-theme='dark'] :where(main, .feedback) a { color: #f59e6b; }
 
-:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost']),
+:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']),
 :where(main, .feedback) a[href^='//'] {
 	color: inherit;
 	text-decoration-line: underline;
@@ -153,11 +153,11 @@ hr {
 	text-decoration-thickness: 1px;
 	text-underline-offset: 3px;
 }
-:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost']):hover,
+:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):hover,
 :where(main, .feedback) a[href^='//']:hover {
 	text-decoration-style: solid;
 }
-:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost'])::after,
+:where(main, .feedback) a[href^='http']:not([href*='hamza-asad.vercel.app']):not([href*='localhost']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online']):not([href*='hamzaasad.online'])::after,
 :where(main, .feedback) a[href^='//']::after {
 	content: '';
 	display: inline-block;

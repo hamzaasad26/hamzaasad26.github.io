@@ -27,36 +27,7 @@ const slug = Astro.url.pathname.replace(/^\/+|\/+$/g, '');
 			</div>
 		</div>
 
-		<div class="cm-filters" role="group" aria-label="Filter comments by tag">
-			<span class="cm-label">filter:</span>
-			<button type="button" class="cm-chip" data-filter="all" data-tag="all" aria-pressed="true"
-				>all <span class="cm-n">0</span></button
-			>
-			<button
-				type="button"
-				class="cm-chip"
-				data-filter="question"
-				data-tag="question"
-				aria-pressed="false">[?] question <span class="cm-n">0</span></button
-			>
-			<button
-				type="button"
-				class="cm-chip"
-				data-filter="praise"
-				data-tag="praise"
-				aria-pressed="false">[+] praise <span class="cm-n">0</span></button
-			>
-			<button
-				type="button"
-				class="cm-chip"
-				data-filter="correction"
-				data-tag="correction"
-				aria-pressed="false">[!] correction <span class="cm-n">0</span></button
-			>
-			<button type="button" class="cm-chip" data-filter="idea" data-tag="idea" aria-pressed="false"
-				>[*] idea <span class="cm-n">0</span></button
-			>
-		</div>
+
 
 		<ol class="cm-list" id="cm-list" aria-live="polite">
 			<li class="cm-empty">loading comments...</li>
