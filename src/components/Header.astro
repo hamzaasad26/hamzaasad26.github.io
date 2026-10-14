@@ -16,7 +16,7 @@ import ThemeToggle from './ThemeToggle.astro';
 				<div class="resume-wrap">
 					<a href="/resume.pdf" target="_blank" rel="noopener noreferrer">Resume</a>
 					<div class="resume-pop" aria-hidden="true">
-						<img src="/resume-preview.png" alt="" width="850" height="1100" decoding="async" />
+						<img data-src="/resume-preview.png" alt="" width="850" height="1100" decoding="async" />
 					</div>
 				</div>
 				
@@ -184,3 +184,14 @@ import ThemeToggle from './ThemeToggle.astro';
 		}
 	}
 </style>
+
+<script>
+	const load = () =>
+		document.querySelectorAll<HTMLImageElement>('img[data-src]').forEach((i) => {
+			i.src = i.dataset.src!;
+			i.removeAttribute('data-src');
+		});
+	window.addEventListener('load', () => setTimeout(load, 1000));
+	const w = document.querySelector('.resume-wrap');
+	['mouseenter', 'focusin', 'touchstart'].forEach((e) => w?.addEventListener(e, load, { once: true }));
+</script>
