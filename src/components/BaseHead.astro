@@ -57,7 +57,7 @@ const { title, description, image } = Astro.props;
 		var t;
 		try { t = localStorage.getItem('theme'); } catch (e) {}
 		if (t !== 'light' && t !== 'dark') {
-			t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			t = light;
 		}
 		document.documentElement.dataset.theme = t;
 	})();
