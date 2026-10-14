@@ -1,7 +1,7 @@
 ---
 title: What Undergraduate Research Actually Teaches You
 description: What i've learned during my Research Assistanships.
-pubDate: 2026-12-10
+pubDate: 2026-10-14
 heroImage: ../../assets/blog/undergraduate-research.jpg
 ---
 
