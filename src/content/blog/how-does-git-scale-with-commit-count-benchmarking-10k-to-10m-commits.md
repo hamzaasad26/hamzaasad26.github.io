@@ -25,18 +25,19 @@ version:
 
 - Without an index, `git rev-list --count`, `git log` and `git blame`
   slow down roughly 10× to 14× for every 10× more commits.
-- The commit-graph makes counting commits about 5× to 8× faster at
-  every size. It gave no consistent gain for `git log --oneline`.
+- The commit-graph makes counting commits about 5× to 8× faster in the
+  larger runs. At 10K, the measured speedup is about 8.5×, but that ratio
+  is less reliable because the timings are close to the measurement floor.
+  It gave no consistent gain for `git log --oneline`.
 - Changed-path Bloom filters help path-based operations. At 10M
   commits, blame dropped from about 68 seconds to 22 seconds, and
   `git log -n 1 -- static.txt` from 62 seconds to 28 seconds. The
   indexes move the curve down; they don't flatten it.
-- A shallow clone sends the same 104 objects at every size, yet its
-  time grows from about 0.03 seconds to about 3 seconds in the
-  original pack layout. A separate 1M-commit control showed that
-  repacking without deltas made the shallow clone about 8× faster.
-  Pack layout clearly matters, though I haven't isolated the exact
-  mechanism.
+- Shallow-clone time grows from about 0.03 seconds at 10K to about
+  3 seconds at 10M in the original pack layout. A separate 1M-commit
+  control showed that repacking without deltas made the shallow clone
+  about 8× faster. Pack layout clearly matters, though I haven't isolated
+  the exact mechanism.
 
 Everything here comes from one laptop and one Git version. Cache state
 was not independently controlled or verified, and I flag where the
@@ -190,8 +191,8 @@ controlled warm-cache-versus-cold-cache comparison.
 
 ### History operations
 
-Mean seconds. The 10K count timings (about 4 ms) are close to
-hyperfine's measurement floor, so treat ratios at that size as
+Mean seconds. The indexed 10K count timings (about 4 ms) are close to
+hyperfine's measurement floor, so treat the ratios at that size as
 indicative only.
 
 | Commits | Index         |  `count` |    `log` | `logfile` |  `blame` |
@@ -217,12 +218,14 @@ What stands out:
   10× more commits, a little worse than linear at the top end.
   `logfile` grew 20.2× from 1M to 10M without a graph, 15.9× with the
   basic graph and 17.9× with Bloom filters.
-- The commit-graph speeds up counting by about 5× to 8× at every size
-  (6.5× at 1M and 5.4× at 10M). That lines up with the roughly 5.5×
-  reported in the original commit message. It gave no consistent gain
-  for `git log --oneline`. One possible explanation is that `log`
-  still has to read and format every commit message, but I didn't test
-  that.
+- In the larger runs, the commit-graph speeds up counting by about
+  5× to 8× (6.5× at 1M and 5.4× at 10M). At 10K, the measured speedup
+  is about 8.5×, but that ratio is less reliable because the timings are
+  close to the measurement floor. The larger-run results line up with
+  the roughly 5.5× reported in the original commit message. The graph
+  gave no consistent gain for `git log --oneline`. One possible
+  explanation is that `log` still has to read and format every commit
+  message, but I didn't test that.
 - Bloom filters help path operations. Against the basic graph at 10M,
   blame went from 67.6 seconds to 22.1 seconds (about 3×), and
   `logfile` from 62.1 seconds to 28.5 seconds (about 2.2×). Count and
@@ -326,10 +329,11 @@ I'm not claiming direct validation at that size.
 
 ### The shallow-clone puzzle
 
-A `--depth 1` clone sends one commit, one tree and a handful of blobs:
-104 objects in these repositories, regardless of repository size. You
-might expect its time to stay roughly flat. In the original pack layout,
-it didn't.
+The expected payload for a `--depth 1` clone in this dataset is 104
+objects: one commit, two tree objects and 101 blobs. I inspected the
+object count at 1M, but did not inspect the 10M clone directly, so I
+can't confirm that count at every size. You might expect its time to stay
+roughly flat. In the original pack layout, it didn't.
 
 My first 10M shallow clone took 10.4 seconds. That was a single run
 right after a 17-minute full clone. I treat it as a slow first-run
@@ -351,9 +355,10 @@ consistently slower, and tracing adds some overhead.
 |                   1M |   0.25–0.30 s |        0.22–0.27 s |
 |                  10M |     2.9–3.1 s |       2.85–3.09 s |
 
-Across a thousandfold increase in commits, the clone still sends 104
-objects, but measured time in the original pack layout grows by roughly
-two orders of magnitude. So what is the time tracking?
+Across a thousandfold increase in commits, measured time in the
+original pack layout grows by roughly two orders of magnitude. At 1M,
+the shallow clone transferred 104 objects, which raises the question:
+what is the time tracking?
 
 I ran controls at 1M commits:
 
@@ -378,8 +383,8 @@ dropped from about 0.222 seconds to 0.028 seconds in hyperfine, roughly
 
 ![Original vs. no-delta pack layout at 1M commits: history operations and clones](/git-bench/layout.png)
 
-In these experiments, pack layout had a substantial effect on
-shallow-clone preparation time, even when the repository and the 104
+In the 1M control, pack layout had a substantial effect on
+shallow-clone preparation time even though the repository and the 104
 transferred objects were unchanged. The original-layout results also
 show preparation time rising with repository size. I haven't isolated
 every factor behind that scaling.
@@ -393,8 +398,8 @@ dependence is measured; the explanation is not.
 
 I reran the 1M history and clone benchmarks on both layouts.
 
-- **History with the commit-graph:** the layouts differed by within
-  about 2.5% on every operation.
+- **History with the commit-graph:** the layouts differed by no more
+  than about 2.5% on any operation.
 - **History without the graph:** the no-delta median was about 3% to
   6% slower, with much higher variance. The five count runs on the
   no-delta pack were 4.56, 4.58, 4.59, 5.29 and 6.61 seconds, against
@@ -417,8 +422,10 @@ which of my 10M clone results would shift in a real repository.
 1. Without an index, count, log and blame grow roughly 10× to 14× per
    10× more commits in this synthetic workload, slightly worse than
    linear at 10M.
-2. The commit-graph speeds up counting by about 5× to 8× at every size,
-   with no consistent gain for `git log --oneline`.
+2. In the larger runs, the commit-graph speeds up counting by about
+   5× to 8×. The measured speedup at 10K is about 8.5×, but that ratio
+   is less reliable because the timings are close to the measurement
+   floor. There was no consistent gain for `git log --oneline`.
 3. Bloom filters help path operations at 1M and 10M. They shift the
    curve down but don't flatten it.
 4. At 10M, building the graph plus Bloom filters takes about 7 minutes,
@@ -430,9 +437,9 @@ which of my 10M clone results would shift in a real repository.
    detailed object-count breakdown shown here is for 10K; 10M was not
    inspected.
 7. In the original pack layout, repeated shallow-clone timings grew
-   with repository size even though the payload remained 104 objects.
-   The 1M repack control shows that pack layout can have a large effect
-   on that cost.
+   with repository size. The 1M control transferred 104 objects, but the
+   10M clone's object count was not directly inspected. The 1M repack
+   control shows that pack layout can have a large effect on that cost.
 
 ### Measured, but based on limited repeats
 
@@ -453,7 +460,7 @@ which of my 10M clone results would shift in a real repository.
 - Delta-related work may explain the slow `prepare-pack` phase on the
   original pack.
 - Full and blobless clones may be slower on the no-delta pack because
-  it is much larger.
+  the pack itself is much larger.
 
 ## Limitations
 
@@ -530,18 +537,18 @@ results above.
 
 ## Conclusion
 
-History length costs Git roughly linear time for operations that have to
-walk it, and a little worse than linear at 10M in this synthetic
-workload. The commit-graph and Bloom filters are useful speedups that
-shift the curve down by about 2× to 8× depending on the operation, but
-they don't change its shape.
+For most operations, runtime grew roughly linearly with history length.
+However, path-limited `git log` grew substantially faster than linearly
+between 1M and 10M commits in this synthetic workload. The commit-graph
+and Bloom filters shift the runtime curve down, with speedups varying by
+operation, but they don't eliminate the scaling cost.
 
 The most useful surprise wasn't just about commits: shallow-clone
 preparation time depended strongly on how the repository was packed.
 Repacking the same 1M-commit repository without deltas made the shallow
-clone about 8× faster, even though it sent the same 104 objects. If you
-benchmark clone behavior on synthetic repositories, check the pack
-layout before drawing broad conclusions.
+clone about 8× faster, even though it transferred the same 104 objects
+in both layouts. If you benchmark clone behavior on synthetic
+repositories, check the pack layout before drawing broad conclusions.
 
 This is one laptop, one Git version and a deliberately simple history.
 I'd treat the results as a map of where to look on real repositories,
