@@ -5,6 +5,13 @@ pubDate: 2026-10-18
 heroImage: ../../assets/blog/git.jpg
 ---
 
+---
+title: How Does Git Scale With Commit Count? Benchmarking 10K to 10M Commits
+description: I built synthetic Git repos from 10K to 10M commits to measure how history length affects count, log, blame and clone times, and what commit-graphs, Bloom filters and pack layout actually buy you.
+pubDate: 2026-10-18
+heroImage: ../../assets/blog/git.jpg
+---
+
 This started as a dumb idea: build a GitHub repository with a record
 number of commits. Then I found out people had already done it, and the
 record sits around 100 million empty commits
@@ -202,8 +209,7 @@ indicative only.
 |     10M | Graph         |   11.975 |   81.466 |    62.109 |   67.554 |
 |     10M | Graph + Bloom |   11.957 |   72.454 |    28.468 |   22.077 |
 
-**[IMAGE PLACEHOLDER: `ops.png` — history operations vs. commit
-count, log-log, mean ± standard deviation.]**
+![History operations vs. commit count, log-log, mean ± standard deviation](/git-bench/ops.png)
 
 What stands out:
 
@@ -237,8 +243,7 @@ Each build time is a single measurement, so there are no error bars.
 |      1M |               9.7 s / 58 MB |                39 s / 64 MB |
 |     10M |           2 m 22 s / 573 MB |            7 m 12 s / 639 MB |
 
-**[IMAGE PLACEHOLDER: `index.png` — index build time and on-disk size
-vs. commit count.]**
+![Index build time and on-disk size vs. commit count](/git-bench/index.png)
 
 Bloom filters add roughly 11% to the file size and make the build take
 about 3× as long. At 10M, that is about 289 seconds more than the plain
@@ -286,8 +291,7 @@ slow first observation; the repeated runs described below were around
 \*The 10M shallow result is a slow first-run observation, not the
 repeated-run estimate.
 
-**[IMAGE PLACEHOLDER: `clone.png` — clone time by clone type and
-repository size.]**
+![Clone time by clone type and repository size](/git-bench/clone.png)
 
 Full clones grew roughly in step with commit count. Treeless was about
 2.7× faster than full at 10M, but that comparison is based on one run.
@@ -372,8 +376,7 @@ to 2.7 GB and took 2 minutes 28 seconds to build. The shallow clone then
 dropped from about 0.222 seconds to 0.028 seconds in hyperfine, roughly
 8× faster, with the same commits and the same 104 objects sent.
 
-**[IMAGE PLACEHOLDER: `layout.png` — original vs. no-delta pack
-layout, comparing history operations and clone types.]**
+![Original vs. no-delta pack layout at 1M commits: history operations and clones](/git-bench/layout.png)
 
 In these experiments, pack layout had a substantial effect on
 shallow-clone preparation time, even when the repository and the 104
